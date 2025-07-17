@@ -1,6 +1,6 @@
-import 'package:zenvestor_client/zenvestor_client.dart';
 import 'package:flutter/material.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
+import 'package:zenvestor_client/zenvestor_client.dart';
 
 /// Sets up a global client object that can be used to talk to the server from
 /// anywhere in our app. The client is generated from your server code
@@ -11,6 +11,7 @@ import 'package:serverpod_flutter/serverpod_flutter.dart';
 /// instead of using a global client object. This is just a simple example.
 late final Client client;
 
+/// The server URL used to connect to the backend.
 late String serverUrl;
 
 void main() {
@@ -29,7 +30,9 @@ void main() {
   runApp(const MyApp());
 }
 
+/// The root widget of the application.
 class MyApp extends StatelessWidget {
+  /// Creates the root application widget.
   const MyApp({super.key});
 
   @override
@@ -42,15 +45,19 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// The main page of the application that displays a greeting form.
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  /// Creates the home page with the specified [title].
+  const MyHomePage({required this.title, super.key});
 
+  /// The title to display in the app bar.
   final String title;
 
   @override
   MyHomePageState createState() => MyHomePageState();
 }
 
+/// The state for [MyHomePage] widget.
 class MyHomePageState extends State<MyHomePage> {
   /// Holds the last result or null if no result exists yet.
   String? _resultMessage;
@@ -64,14 +71,14 @@ class MyHomePageState extends State<MyHomePage> {
   /// Calls the `hello` method of the `greeting` endpoint. Will set either the
   /// `_resultMessage` or `_errorMessage` field, depending on if the call
   /// is successful.
-  void _callHello() async {
+  Future<void> _callHello() async {
     try {
       final result = await client.greeting.hello(_textEditingController.text);
       setState(() {
         _errorMessage = null;
         _resultMessage = result.message;
       });
-    } catch (e) {
+    } on Exception catch (e) {
       setState(() {
         _errorMessage = '$e';
       });
@@ -87,14 +94,14 @@ class MyHomePageState extends State<MyHomePage> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
+              padding: const EdgeInsets.only(bottom: 16),
               child: TextField(
                 controller: _textEditingController,
                 decoration: const InputDecoration(hintText: 'Enter your name'),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
+              padding: const EdgeInsets.only(bottom: 16),
               child: ElevatedButton(
                 onPressed: _callHello,
                 child: const Text('Send to Server'),
@@ -114,10 +121,13 @@ class MyHomePageState extends State<MyHomePage> {
 /// ResultDisplays shows the result of the call. Either the returned result
 /// from the `example.greeting` endpoint method or an error message.
 class ResultDisplay extends StatelessWidget {
-  final String? resultMessage;
-  final String? errorMessage;
-
+  /// Creates a result display widget.
   const ResultDisplay({super.key, this.resultMessage, this.errorMessage});
+
+  /// The successful result message to display.
+  final String? resultMessage;
+  /// The error message to display.
+  final String? errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +146,7 @@ class ResultDisplay extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 50),
-      child: Container(
+      child: ColoredBox(
         color: backgroundColor,
         child: Center(child: Text(text)),
       ),
