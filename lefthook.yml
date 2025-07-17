@@ -1,0 +1,51 @@
+# Lefthook configuration for Zenvestor
+# Git hooks for code quality enforcement
+
+pre-commit:
+  parallel: false
+  commands:
+    # Phase 1: Auto-formatting (runs first, automatically fixes and stages changes)
+    format-server:
+      run: cd zenvestor_server && dart format . && git add -A
+      tags: format
+      skip:
+        - merge
+        - rebase
+      
+    format-flutter:
+      run: cd zenvestor_flutter && dart format . && git add -A  
+      tags: format
+      skip:
+        - merge
+        - rebase
+      
+    # Phase 2: Static Analysis (shows ALL errors before failing)
+    analyze-server:
+      run: cd zenvestor_server && dart analyze --fatal-infos
+      tags: analyze
+      
+    analyze-flutter:
+      run: cd zenvestor_flutter && flutter analyze --fatal-infos
+      tags: analyze
+      
+    # Phase 3: Tests (requires Docker containers to be running)
+    test-server:
+      run: cd zenvestor_server && dart test
+      tags: test
+      
+    test-flutter:
+      run: cd zenvestor_flutter && flutter test
+      tags: test
+
+# Optional: pre-push hook to run tests before pushing
+# Tests require database to be running via docker-compose
+pre-push:
+  parallel: true
+  commands:
+    test-server:
+      run: cd zenvestor_server && dart test
+      tags: test
+      
+    test-flutter:
+      run: cd zenvestor_flutter && flutter test
+      tags: test

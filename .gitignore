@@ -1,0 +1,19 @@
+# Lefthook
+.lefthook/
+lefthook-local.yml
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+*.temp
