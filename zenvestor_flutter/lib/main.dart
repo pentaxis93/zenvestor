@@ -126,6 +126,7 @@ class ResultDisplay extends StatelessWidget {
 
   /// The successful result message to display.
   final String? resultMessage;
+
   /// The error message to display.
   final String? errorMessage;
 
