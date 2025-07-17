@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [ '**' ]  # Run on push to any branch
+  pull_request:
+    branches: [ '**' ]  # Run on PR to any branch
+  workflow_dispatch:  # Allow manual trigger
+
+# Cancel in-progress runs when a new run is triggered
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    
+    # Service containers for database and cache
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: zenvestor_test
+          POSTGRES_PASSWORD: ***REMOVED***
+        ports:
+          - 9090:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      redis:
+        image: redis:6.2.6
+        ports:
+          - 9091:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          REDIS_PASSWORD: ***REMOVED***
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      # Cache dependencies for faster builds
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            **/pubspec.lock
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      # Install dependencies
+      - name: Install server dependencies
+        working-directory: zenvestor_server
+        run: dart pub get
+
+      - name: Install Flutter dependencies
+        working-directory: zenvestor_flutter
+        run: flutter pub get
+
+      # Generate Serverpod code
+      - name: Generate Serverpod code
+        working-directory: zenvestor_server
+        run: |
+          dart pub global activate serverpod_cli
+          export PATH="$PATH:$HOME/.pub-cache/bin"
+          serverpod generate
+
+      # Phase 1: Static Analysis
+      - name: Analyze server code
+        working-directory: zenvestor_server
+        run: dart analyze --fatal-infos
+
+      - name: Analyze Flutter code
+        working-directory: zenvestor_flutter
+        run: flutter analyze --fatal-infos
+
+      # Phase 2: Run Tests
+      - name: Run server tests
+        working-directory: zenvestor_server
+        run: dart test
+        env:
+          # Serverpod uses SERVERPOD_PASSWORD_ prefix for password environment variables
+          SERVERPOD_PASSWORD_database: ***REMOVED***
+          SERVERPOD_PASSWORD_redis: ***REMOVED***
+
+      - name: Run Flutter tests
+        working-directory: zenvestor_flutter
+        run: flutter test
