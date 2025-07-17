@@ -22,21 +22,17 @@ environment:
   flutter: '>=3.24.0'
 
 dependencies:
+  cupertino_icons: ^1.0.5
   flutter:
     sdk: flutter
   serverpod_flutter: 2.9.1
   zenvestor_client:
     path: ../zenvestor_client
 
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.5
-
 dev_dependencies:
-  flutter_lints: '>=3.0.0 <7.0.0'
   flutter_test:
     sdk: flutter
+  very_good_analysis: ^9.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
