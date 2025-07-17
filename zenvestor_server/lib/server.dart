@@ -1,16 +1,18 @@
-import 'package:zenvestor_server/src/birthday_reminder.dart';
 import 'package:serverpod/serverpod.dart';
-
+import 'package:zenvestor_server/src/birthday_reminder.dart';
+import 'package:zenvestor_server/src/generated/endpoints.dart';
+import 'package:zenvestor_server/src/generated/protocol.dart';
 import 'package:zenvestor_server/src/web/routes/root.dart';
-
-import 'src/generated/protocol.dart';
-import 'src/generated/endpoints.dart';
 
 // This is the starting point of your Serverpod server. In most cases, you will
 // only need to make additions to this file if you add future calls,  are
 // configuring Relic (Serverpod's web-server), or need custom setup work.
 
-void run(List<String> args) async {
+/// Runs the Serverpod server with the provided command line arguments.
+///
+/// This function initializes the server, sets up web routes, starts the server,
+/// and registers future calls for scheduled tasks.
+Future<void> run(List<String> args) async {
   // Initialize Serverpod and connect it with your generated code.
   final pod = Serverpod(args, Protocol(), Endpoints());
 
@@ -49,7 +51,7 @@ void run(List<String> args) async {
       author: 'Serverpod Server',
       timestamp: DateTime.now(),
     ),
-    Duration(seconds: 5),
+    const Duration(seconds: 5),
   );
 }
 
@@ -57,4 +59,7 @@ void run(List<String> args) async {
 ///
 /// This is better than using a string literal, as it will reduce the risk of
 /// typos and make it easier to refactor the code.
-enum FutureCallNames { birthdayReminder }
+enum FutureCallNames {
+  /// Future call for sending birthday reminders.
+  birthdayReminder
+}
