@@ -1,5 +1,5 @@
-import 'package:zenvestor_server/src/generated/protocol.dart';
 import 'package:serverpod/serverpod.dart';
+import 'package:zenvestor_server/src/generated/protocol.dart';
 
 /// This is a simple example of a future call that logs a birthday reminder.
 ///
