@@ -28,24 +28,46 @@ pre-commit:
       run: cd zenvestor_flutter && flutter analyze --fatal-infos
       tags: analyze
       
-    # Phase 3: Tests (requires Docker containers to be running)
-    test-server:
-      run: cd zenvestor_server && dart test
+    # Phase 3: Tests with Coverage (requires Docker containers to be running)
+    test-server-coverage:
+      run: |
+        cd zenvestor_server && \
+        dart test --coverage=coverage && \
+        dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
+        total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
+        echo "Server test coverage: ${total}%" && \
+        awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
       tags: test
       
-    test-flutter:
-      run: cd zenvestor_flutter && flutter test
+    test-flutter-coverage:
+      run: |
+        cd zenvestor_flutter && \
+        flutter test --coverage && \
+        total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
+        echo "Flutter test coverage: ${total}%" && \
+        awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
       tags: test
 
-# Optional: pre-push hook to run tests before pushing
+# Pre-push hook to run tests with coverage before pushing
 # Tests require database to be running via docker-compose
 pre-push:
   parallel: true
   commands:
-    test-server:
-      run: cd zenvestor_server && dart test
+    test-server-coverage:
+      run: |
+        cd zenvestor_server && \
+        dart test --coverage=coverage && \
+        dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
+        total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
+        echo "Server test coverage: ${total}%" && \
+        awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
       tags: test
       
-    test-flutter:
-      run: cd zenvestor_flutter && flutter test
+    test-flutter-coverage:
+      run: |
+        cd zenvestor_flutter && \
+        flutter test --coverage && \
+        total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
+        echo "Flutter test coverage: ${total}%" && \
+        awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
       tags: test
