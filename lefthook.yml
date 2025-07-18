@@ -2,52 +2,59 @@
 # Git hooks for code quality enforcement
 
 pre-commit:
-  parallel: false
+  parallel: false  # Run phases sequentially
   commands:
-    # Phase 1: Auto-formatting (runs first, automatically fixes and stages changes)
-    format-server:
-      run: cd zenvestor_server && dart format . && git add -A
-      tags: format
+    # Phase 1: Auto-formatting (both run in parallel via shell)
+    format-all:
+      run: |
+        echo "🎨 Formatting code..." && \
+        (cd zenvestor_server && dart format . && git add -A) & \
+        (cd zenvestor_flutter && dart format . && git add -A) & \
+        wait && \
+        echo "✅ Formatting complete"
       skip:
         - merge
         - rebase
       
-    format-flutter:
-      run: cd zenvestor_flutter && dart format . && git add -A  
-      tags: format
-      skip:
-        - merge
-        - rebase
-      
-    # Phase 2: Static Analysis (shows ALL errors before failing)
-    analyze-server:
-      run: cd zenvestor_server && dart analyze --fatal-infos
-      tags: analyze
-      
-    analyze-flutter:
-      run: cd zenvestor_flutter && flutter analyze --fatal-infos
-      tags: analyze
-      
-    # Phase 3: Tests with Coverage (requires Docker containers to be running)
-    test-server-coverage:
+    # Phase 2: Static Analysis (both run in parallel via shell)
+    analyze-all:
       run: |
-        cd zenvestor_server && \
-        dart test --coverage=coverage && \
-        dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
-        lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
-        total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
-        echo "Server test coverage: ${total}%" && \
-        awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
-      tags: test
+        echo "🔍 Analyzing code..." && \
+        (cd zenvestor_server && dart analyze --fatal-infos) & \
+        server_pid=$! && \
+        (cd zenvestor_flutter && flutter analyze --fatal-infos) & \
+        flutter_pid=$! && \
+        wait $server_pid && wait $flutter_pid && \
+        echo "✅ Analysis complete"
       
-    test-flutter-coverage:
+    # Phase 3: Tests with Coverage (both run in parallel via shell)
+    test-all:
       run: |
-        cd zenvestor_flutter && \
-        flutter test --coverage && \
-        total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
-        echo "Flutter test coverage: ${total}%" && \
-        awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
-      tags: test
+        # Detect number of CPU cores for optimal concurrency
+        if command -v nproc >/dev/null 2>&1; then
+          CORES=$(nproc)
+        elif command -v sysctl >/dev/null 2>&1; then
+          CORES=$(sysctl -n hw.ncpu)
+        else
+          CORES=4  # Fallback to 4 cores if detection fails
+        fi && \
+        echo "🧪 Running tests with coverage (using $CORES cores)..." && \
+        (cd zenvestor_server && \
+         dart test --coverage=coverage -j $CORES && \
+         dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
+         lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
+         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
+         echo "Server test coverage: ${total}%" && \
+         awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Server coverage below 45% threshold"; exit 1 } else { print "✅ Server coverage meets 45% threshold" } }') & \
+        server_pid=$! && \
+        (cd zenvestor_flutter && \
+         flutter test --coverage --concurrency=$CORES && \
+         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
+         echo "Flutter test coverage: ${total}%" && \
+         awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Flutter coverage below 45% threshold"; exit 1 } else { print "✅ Flutter coverage meets 45% threshold" } }') & \
+        flutter_pid=$! && \
+        wait $server_pid && wait $flutter_pid && \
+        echo "✅ All tests complete"
 
 # Pre-push hook to run tests with coverage before pushing
 # Tests require database to be running via docker-compose
@@ -56,8 +63,16 @@ pre-push:
   commands:
     test-server-coverage:
       run: |
+        # Detect number of CPU cores for optimal concurrency
+        if command -v nproc >/dev/null 2>&1; then
+          CORES=$(nproc)
+        elif command -v sysctl >/dev/null 2>&1; then
+          CORES=$(sysctl -n hw.ncpu)
+        else
+          CORES=4  # Fallback to 4 cores if detection fails
+        fi && \
         cd zenvestor_server && \
-        dart test --coverage=coverage && \
+        dart test --coverage=coverage -j $CORES && \
         dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
         lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
@@ -67,8 +82,16 @@ pre-push:
       
     test-flutter-coverage:
       run: |
+        # Detect number of CPU cores for optimal concurrency
+        if command -v nproc >/dev/null 2>&1; then
+          CORES=$(nproc)
+        elif command -v sysctl >/dev/null 2>&1; then
+          CORES=$(sysctl -n hw.ncpu)
+        else
+          CORES=4  # Fallback to 4 cores if detection fails
+        fi && \
         cd zenvestor_flutter && \
-        flutter test --coverage && \
+        flutter test --coverage -j $CORES && \
         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
         echo "Flutter test coverage: ${total}%" && \
         awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'

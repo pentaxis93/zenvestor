@@ -6,6 +6,15 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
+# Detect number of CPU cores for optimal concurrency
+if command -v nproc >/dev/null 2>&1; then
+    CORES=$(nproc)
+elif command -v sysctl >/dev/null 2>&1; then
+    CORES=$(sysctl -n hw.ncpu)
+else
+    CORES=4  # Fallback to 4 cores if detection fails
+fi
+
 # Option to show only summary
 SHOW_LINES=${1:-yes}  # Show untested lines by default
 
@@ -15,7 +24,7 @@ YELLOW='\033[0;33m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-echo "Finding untested code..."
+echo "Finding untested code (using $CORES cores for tests)..."
 echo ""
 
 # Function to analyze coverage for a project
@@ -33,11 +42,11 @@ analyze_project_coverage() {
     if [ ! -f "coverage/lcov.info" ]; then
         echo "No coverage data for $project. Running tests..."
         if [ "$project" = "zenvestor_server" ]; then
-            dart test --coverage=coverage >/dev/null 2>&1
+            dart test --coverage=coverage -j $CORES >/dev/null 2>&1
             dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib >/dev/null 2>&1
             lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info >/dev/null 2>&1
         else
-            flutter test --coverage >/dev/null 2>&1
+            flutter test --coverage --concurrency=$CORES >/dev/null 2>&1
         fi
         
         if [ ! -f "coverage/lcov.info" ]; then
@@ -250,9 +259,31 @@ if ! dart pub global list | grep -q coverage; then
     dart pub global activate coverage
 fi
 
-# Analyze both projects
-analyze_project_coverage "zenvestor_server"
-analyze_project_coverage "zenvestor_flutter"
+# Analyze both projects in parallel
+echo "Analyzing projects in parallel..."
+echo ""
+
+# Create temp files for output
+SERVER_OUT="/tmp/zenvestor_server_coverage_$$.tmp"
+FLUTTER_OUT="/tmp/zenvestor_flutter_coverage_$$.tmp"
+
+# Run analyses in parallel
+(analyze_project_coverage "zenvestor_server" > "$SERVER_OUT") &
+server_pid=$!
+
+(analyze_project_coverage "zenvestor_flutter" > "$FLUTTER_OUT") &
+flutter_pid=$!
+
+# Wait for both to complete
+wait $server_pid
+wait $flutter_pid
+
+# Display results
+cat "$SERVER_OUT"
+cat "$FLUTTER_OUT"
+
+# Clean up temp files
+rm -f "$SERVER_OUT" "$FLUTTER_OUT"
 
 echo -e "${GREEN}Analysis complete.${NC}"
 echo ""
