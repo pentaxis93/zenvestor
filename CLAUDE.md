@@ -93,6 +93,7 @@ flutter test
 - **Flutter unit/widget tests**: `flutter test` in `zenvestor_flutter/`
 - **Integration tests**: `flutter test integration_test` in `zenvestor_flutter/`
 - **Coverage**: `flutter test --coverage` then `genhtml coverage/lcov.info -o coverage/html`
+- **Find untested code**: Use `./scripts/find-untested-code.sh` to identify files and specific lines that need test coverage
 
 ### Code Formatting
 
@@ -188,6 +189,11 @@ version: 1.2.3+45  # version+buildNumber
 3. Refactor for clarity
 4. Run all quality checks
 5. Commit with conventional commit message
+
+### Git Commits
+
+- **NEVER** commit changes unless explicitly requested by the user
+- When asked to commit, follow the conventional commit format above
 
 ### Bug Fixes
 

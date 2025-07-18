@@ -45,13 +45,13 @@ pre-commit:
          lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
          total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
          echo "Server test coverage: ${total}%" && \
-         awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Server coverage below 45% threshold"; exit 1 } else { print "✅ Server coverage meets 45% threshold" } }') & \
+         awk -v total="$total" 'BEGIN { if (total < 70) { print "❌ Server coverage below 70% threshold"; exit 1 } else { print "✅ Server coverage meets 70% threshold" } }') & \
         server_pid=$! && \
         (cd zenvestor_flutter && \
          flutter test --coverage --concurrency=$CORES && \
          total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
          echo "Flutter test coverage: ${total}%" && \
-         awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Flutter coverage below 45% threshold"; exit 1 } else { print "✅ Flutter coverage meets 45% threshold" } }') & \
+         awk -v total="$total" 'BEGIN { if (total < 70) { print "❌ Flutter coverage below 70% threshold"; exit 1 } else { print "✅ Flutter coverage meets 70% threshold" } }') & \
         flutter_pid=$! && \
         wait $server_pid && wait $flutter_pid && \
         echo "✅ All tests complete"
@@ -77,7 +77,7 @@ pre-push:
         lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
         echo "Server test coverage: ${total}%" && \
-        awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
+        awk -v total="$total" 'BEGIN { if (total < 70) { print "❌ Coverage below 70% threshold"; exit 1 } else { print "✅ Coverage meets 70% threshold" } }'
       tags: test
       
     test-flutter-coverage:
@@ -94,5 +94,5 @@ pre-push:
         flutter test --coverage -j $CORES && \
         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
         echo "Flutter test coverage: ${total}%" && \
-        awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
+        awk -v total="$total" 'BEGIN { if (total < 70) { print "❌ Coverage below 70% threshold"; exit 1 } else { print "✅ Coverage meets 70% threshold" } }'
       tags: test
