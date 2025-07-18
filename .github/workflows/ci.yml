@@ -79,13 +79,22 @@ jobs:
         working-directory: zenvestor_flutter
         run: flutter pub get
 
-      # Generate Serverpod code
-      - name: Generate Serverpod code
+      # Generate Serverpod code and activate coverage
+      - name: Generate Serverpod code and activate coverage
         working-directory: zenvestor_server
         run: |
           dart pub global activate serverpod_cli
+          dart pub global activate coverage
           export PATH="$PATH:$HOME/.pub-cache/bin"
           serverpod generate
+
+      # Install bc and lcov for coverage calculations
+      - name: Install coverage tools
+        run: sudo apt-get update && sudo apt-get install -y bc lcov
+
+      # Make test script executable
+      - name: Make test script executable
+        run: chmod +x ./scripts/test-coverage.sh
 
       # Phase 1: Static Analysis
       - name: Analyze server code
@@ -96,15 +105,33 @@ jobs:
         working-directory: zenvestor_flutter
         run: flutter analyze --fatal-infos
 
-      # Phase 2: Run Tests
-      - name: Run server tests
-        working-directory: zenvestor_server
-        run: dart test
+      # Phase 2: Run Tests with Coverage
+      - name: Run tests with coverage check
+        run: |
+          echo "🧪 Running tests with coverage..."
+          output=$(./scripts/test-coverage.sh)
+          echo "$output"
+          server_coverage=$(echo "$output" | grep "Server:" | grep -oE "[0-9]+(\.[0-9]+)?")
+          flutter_coverage=$(echo "$output" | grep "Flutter:" | grep -oE "[0-9]+(\.[0-9]+)?")
+          echo ""
+          echo "Coverage threshold: 100%"
+          echo ""
+          # Check server coverage
+          if [ $(echo "$server_coverage < 100" | bc -l) -eq 1 ]; then
+            echo "❌ Server coverage ${server_coverage}% is below 100% threshold"
+            exit 1
+          else
+            echo "✅ Server coverage ${server_coverage}% meets threshold"
+          fi
+          # Check flutter coverage
+          if [ $(echo "$flutter_coverage < 100" | bc -l) -eq 1 ]; then
+            echo "❌ Flutter coverage ${flutter_coverage}% is below 100% threshold"
+            exit 1
+          else
+            echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
+          fi
+          echo "✅ All tests complete"
         env:
           # Serverpod uses SERVERPOD_PASSWORD_ prefix for password environment variables
           SERVERPOD_PASSWORD_database: ***REMOVED***
           SERVERPOD_PASSWORD_redis: ***REMOVED***
-
-      - name: Run Flutter tests
-        working-directory: zenvestor_flutter
-        run: flutter test
