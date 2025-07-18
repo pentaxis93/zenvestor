@@ -27,74 +27,60 @@ pre-commit:
         wait $server_pid && wait $flutter_pid && \
         echo "✅ Analysis complete"
       
-    # Phase 3: Tests with Coverage (both run in parallel via shell)
+    # Phase 3: Tests with Coverage
     test-all:
       run: |
-        # Detect number of CPU cores for optimal concurrency
-        if command -v nproc >/dev/null 2>&1; then
-          CORES=$(nproc)
-        elif command -v sysctl >/dev/null 2>&1; then
-          CORES=$(sysctl -n hw.ncpu)
+        echo "🧪 Running tests with coverage..." && \
+        output=$(./scripts/test-coverage.sh) && \
+        echo "$output" && \
+        server_coverage=$(echo "$output" | grep "Server:" | grep -oE "[0-9]+(\.[0-9]+)?") && \
+        flutter_coverage=$(echo "$output" | grep "Flutter:" | grep -oE "[0-9]+(\.[0-9]+)?") && \
+        echo "" && \
+        echo "Coverage threshold: 80%" && \
+        echo "" && \
+        # Check server coverage
+        if [ $(echo "$server_coverage < 80" | bc -l) -eq 1 ]; then
+          echo "❌ Server coverage ${server_coverage}% is below 80% threshold"
+          exit 1
         else
-          CORES=4  # Fallback to 4 cores if detection fails
+          echo "✅ Server coverage ${server_coverage}% meets threshold"
         fi && \
-        echo "🧪 Running tests with coverage (using $CORES cores)..." && \
-        (cd zenvestor_server && \
-         dart test --coverage=coverage -j $CORES && \
-         dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
-         lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
-         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
-         echo "Server test coverage: ${total}%" && \
-         awk -v total="$total" 'BEGIN { if (total < 80) { print "❌ Server coverage below 80% threshold"; exit 1 } else { print "✅ Server coverage meets 80% threshold" } }') & \
-        server_pid=$! && \
-        (cd zenvestor_flutter && \
-         flutter test --coverage --concurrency=$CORES && \
-         lcov --remove coverage/lcov.info 'lib/main.dart' -o coverage/lcov.info && \
-         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
-         echo "Flutter test coverage: ${total}%" && \
-         awk -v total="$total" 'BEGIN { if (total < 80) { print "❌ Flutter coverage below 80% threshold"; exit 1 } else { print "✅ Flutter coverage meets 80% threshold" } }') & \
-        flutter_pid=$! && \
-        wait $server_pid && wait $flutter_pid && \
+        # Check flutter coverage
+        if [ $(echo "$flutter_coverage < 80" | bc -l) -eq 1 ]; then
+          echo "❌ Flutter coverage ${flutter_coverage}% is below 80% threshold"
+          exit 1
+        else
+          echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
+        fi && \
         echo "✅ All tests complete"
 
 # Pre-push hook to run tests with coverage before pushing
 # Tests require database to be running via docker-compose
 pre-push:
-  parallel: true
+  parallel: false
   commands:
-    test-server-coverage:
+    test-coverage:
       run: |
-        # Detect number of CPU cores for optimal concurrency
-        if command -v nproc >/dev/null 2>&1; then
-          CORES=$(nproc)
-        elif command -v sysctl >/dev/null 2>&1; then
-          CORES=$(sysctl -n hw.ncpu)
+        echo "🧪 Running tests with coverage..." && \
+        output=$(./scripts/test-coverage.sh) && \
+        echo "$output" && \
+        server_coverage=$(echo "$output" | grep "Server:" | grep -oE "[0-9]+(\.[0-9]+)?") && \
+        flutter_coverage=$(echo "$output" | grep "Flutter:" | grep -oE "[0-9]+(\.[0-9]+)?") && \
+        echo "" && \
+        echo "Coverage threshold: 80%" && \
+        echo "" && \
+        # Check server coverage
+        if [ $(echo "$server_coverage < 80" | bc -l) -eq 1 ]; then
+          echo "❌ Server coverage ${server_coverage}% is below 80% threshold"
+          exit 1
         else
-          CORES=4  # Fallback to 4 cores if detection fails
+          echo "✅ Server coverage ${server_coverage}% meets threshold"
         fi && \
-        cd zenvestor_server && \
-        dart test --coverage=coverage -j $CORES && \
-        dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
-        lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
-        total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
-        echo "Server test coverage: ${total}%" && \
-        awk -v total="$total" 'BEGIN { if (total < 80) { print "❌ Coverage below 80% threshold"; exit 1 } else { print "✅ Coverage meets 80% threshold" } }'
-      tags: test
-      
-    test-flutter-coverage:
-      run: |
-        # Detect number of CPU cores for optimal concurrency
-        if command -v nproc >/dev/null 2>&1; then
-          CORES=$(nproc)
-        elif command -v sysctl >/dev/null 2>&1; then
-          CORES=$(sysctl -n hw.ncpu)
+        # Check flutter coverage
+        if [ $(echo "$flutter_coverage < 80" | bc -l) -eq 1 ]; then
+          echo "❌ Flutter coverage ${flutter_coverage}% is below 80% threshold"
+          exit 1
         else
-          CORES=4  # Fallback to 4 cores if detection fails
-        fi && \
-        cd zenvestor_flutter && \
-        flutter test --coverage -j $CORES && \
-        lcov --remove coverage/lcov.info 'lib/main.dart' -o coverage/lcov.info && \
-        total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
-        echo "Flutter test coverage: ${total}%" && \
-        awk -v total="$total" 'BEGIN { if (total < 80) { print "❌ Coverage below 80% threshold"; exit 1 } else { print "✅ Coverage meets 80% threshold" } }'
+          echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
+        fi
       tags: test
