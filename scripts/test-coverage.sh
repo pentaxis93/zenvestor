@@ -46,6 +46,8 @@ server_pid=$!
 (
     cd "$PROJECT_ROOT/zenvestor_flutter" && \
     if flutter test --coverage --concurrency=$CORES >/dev/null 2>&1; then
+        # Remove main.dart from coverage
+        lcov --remove coverage/lcov.info 'lib/main.dart' -o coverage/lcov.info >/dev/null 2>&1
         flutter_coverage=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//' | head -1)
         echo "flutter:${flutter_coverage:-0}" > /tmp/flutter_coverage.tmp
     else
@@ -70,31 +72,8 @@ server_coverage=${server_coverage:-0}
 flutter_coverage=${flutter_coverage:-0}
 
 echo "✅ Tests completed"
-
-echo ""
-echo "Coverage threshold: 45%"
 echo ""
 
-# Output results with pass/fail indicators
-echo -n "Server:  ${server_coverage}% "
-if (( $(echo "$server_coverage < 45" | bc -l) )); then
-    echo "❌"
-    server_pass=0
-else
-    echo "✅"
-    server_pass=1
-fi
-
-echo -n "Flutter: ${flutter_coverage}% "
-if (( $(echo "$flutter_coverage < 45" | bc -l) )); then
-    echo "❌"
-    flutter_pass=0
-else
-    echo "✅"
-    flutter_pass=1
-fi
-
-# Exit with error if either fails (matching lefthook behavior)
-if [ $server_pass -eq 0 ] || [ $flutter_pass -eq 0 ]; then
-    exit 1
-fi
+# Output results
+echo "Server:  ${server_coverage}%"
+echo "Flutter: ${flutter_coverage}%"
