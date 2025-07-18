@@ -2,6 +2,127 @@
 
 This guide outlines best practices for writing tests in the Zenvestor project using our testing stack: mocktail for mocking, alchemist for golden testing, and custom fixtures for domain-specific test data.
 
+## Core Testing Philosophy
+
+**CRITICAL: Tests are not about meeting coverage metrics - they are about building quality software.**
+
+In the Zenvestor project, we use test coverage requirements as scaffolding to encourage comprehensive, thoughtful testing. The coverage requirement is not a target to game - it's a minimum threshold that should naturally be exceeded when you write meaningful tests.
+
+### The Purpose of Our Tests
+
+1. **Tests verify actual business logic** - Every test must validate real functionality
+2. **Tests document intended behavior** - They serve as living documentation
+3. **Tests enable confident refactoring** - They catch regressions before production
+4. **Tests drive better design** - TDD forces you to think about interfaces first
+
+### What NOT to Do
+
+❌ **Never write trivial tests just to increase coverage:**
+```dart
+// UNACCEPTABLE - This is gaming the system
+test('constructor works', () {
+  final stock = Stock(symbol: 'AAPL');
+  expect(stock, isNotNull);
+});
+
+// UNACCEPTABLE - Testing getters with no logic
+test('symbol getter returns symbol', () {
+  final stock = Stock(symbol: 'AAPL');
+  expect(stock.symbol, equals('AAPL'));
+});
+```
+
+✅ **Instead, write tests that validate business rules:**
+```dart
+// GOOD - Tests actual business logic
+test('should reject stock symbols with invalid characters', () {
+  expect(
+    () => Stock(symbol: 'APP.L'),
+    throwsA(isA<InvalidSymbolException>()),
+  );
+});
+
+// GOOD - Tests meaningful behavior
+test('should calculate portfolio risk as weighted average of holdings', () {
+  final portfolio = Portfolio([
+    Holding(stock: highRiskStock, weight: 0.3),
+    Holding(stock: lowRiskStock, weight: 0.7),
+  ]);
+  
+  expect(portfolio.overallRisk, closeTo(3.6, 0.01));
+});
+```
+
+### When Coverage Requirements Seem Hard to Meet
+
+If you're struggling to reach the coverage threshold, ask yourself:
+- Is my code doing enough? (Maybe you need more business logic)
+- Am I testing the right things? (Focus on behavior, not implementation)
+- Is my code testable? (Refactor for dependency injection)
+
+The coverage requirement should push you to write better code, not more tests.
+
+### Identifying Untested Code
+
+When you need to see exactly which lines are missing test coverage:
+
+#### Find Untested Code
+```bash
+# Show all files with untested lines
+./scripts/find-untested-code.sh
+
+# Show only files without line details
+./scripts/find-untested-code.sh no
+```
+
+This script will:
+1. List all files that have any untested code
+2. Show the coverage percentage for each file
+3. Display the exact lines that need tests
+4. Show the actual code that's untested
+5. Group consecutive lines for easier reading
+
+Example output:
+```
+=== zenvestor_server ===
+
+src/greeting_endpoint.dart                                   46.1%
+  Untested lines:
+    Line 15
+      if (name.isEmpty) {
+    
+    Lines 18-20
+      } catch (e) {
+        return 'Error: $e';
+      }
+```
+
+#### Manual HTML Report (Visual)
+If you prefer a visual HTML report:
+```bash
+# For server
+cd zenvestor_server
+dart test --coverage=coverage
+dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html  # macOS
+xdg-open coverage/html/index.html  # Linux
+
+# For Flutter
+cd zenvestor_flutter
+flutter test --coverage
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html  # macOS
+xdg-open coverage/html/index.html  # Linux
+```
+
+#### Tips for Improving Coverage
+- Focus on files with the lowest coverage first
+- Test error handling and edge cases (often missed)
+- Test validation logic thoroughly
+- Don't forget to test failure scenarios
+- Use the line numbers to write targeted tests
+
 ## Table of Contents
 
 1. [Test-Driven Development (TDD) Workflow](#test-driven-development-tdd-workflow)
@@ -212,7 +333,44 @@ flutter test
 
 ## Domain-Specific Test Fixtures
 
-Instead of using generic faker data, create domain-specific fixtures that represent realistic business scenarios.
+**IMPORTANT: Always use fixtures for test data. Never create test data inline unless testing edge cases.**
+
+Instead of using generic faker data, create domain-specific fixtures that represent realistic business scenarios. Fixtures ensure:
+- Consistency across all tests
+- Realistic test scenarios
+- Easy maintenance when domain models change
+- Clear test intentions
+
+### Fixture Usage Rules
+
+1. **Always prefer fixtures over inline data**
+   ```dart
+   // ❌ Bad - inline test data
+   test('should calculate portfolio value', () {
+     final stock = Stock(
+       id: '1',
+       symbol: StockSymbol('AAPL'),
+       companyName: CompanyName('Apple Inc.'),
+       // ... many more fields
+     );
+   });
+
+   // ✅ Good - using fixtures
+   test('should calculate portfolio value', () {
+     final stock = StockFixture.apple();
+   });
+   ```
+
+2. **Create a fixture file for each domain entity**
+   - `test/fixtures/stock_fixtures.dart`
+   - `test/fixtures/portfolio_fixtures.dart`
+   - `test/fixtures/user_fixtures.dart`
+
+3. **Use fixtures consistently across all test types**
+   - Unit tests
+   - Widget tests
+   - Integration tests
+   - Golden tests
 
 ### Fixture Structure
 
@@ -434,15 +592,42 @@ void main() {
 
 ### Directory Structure
 
+**IMPORTANT: The test directory structure must exactly mirror the source code structure.** This makes it easy to find tests for any given source file and ensures comprehensive coverage.
+
+For example, if your source file is at:
+```
+lib/src/domain/entities/stock.dart
+```
+
+The corresponding test file must be at:
+```
+test/src/domain/entities/stock_test.dart
+```
+
+#### Complete Structure Example
+
 ```
 zenvestor_server/
+├── lib/
+│   └── src/
+│       ├── domain/
+│       │   ├── entities/
+│       │   │   └── stock.dart
+│       │   └── use_cases/
+│       │       └── get_stock_by_symbol.dart
+│       └── infrastructure/
+│           └── repositories/
+│               └── stock_repository_impl.dart
 ├── test/
-│   ├── unit/
+│   ├── src/
 │   │   ├── domain/
 │   │   │   ├── entities/
+│   │   │   │   └── stock_test.dart          # Mirrors lib/src/domain/entities/stock.dart
 │   │   │   └── use_cases/
+│   │   │       └── get_stock_by_symbol_test.dart
 │   │   └── infrastructure/
 │   │       └── repositories/
+│   │           └── stock_repository_impl_test.dart
 │   ├── integration/
 │   │   └── endpoints/
 │   └── fixtures/
@@ -450,13 +635,26 @@ zenvestor_server/
 │       └── portfolio_fixtures.dart
 
 zenvestor_flutter/
+├── lib/
+│   └── src/
+│       ├── presentation/
+│       │   ├── screens/
+│       │   │   └── stock_list_screen.dart
+│       │   └── widgets/
+│       │       └── stock_card.dart
+│       └── domain/
+│           └── view_models/
+│               └── stock_list_view_model.dart
 ├── test/
-│   ├── unit/
-│   │   ├── view_models/
-│   │   └── mappers/
-│   ├── widget/
-│   │   ├── components/
-│   │   └── screens/
+│   ├── src/
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   └── stock_list_screen_test.dart  # Mirrors lib/src/presentation/screens/
+│   │   │   └── widgets/
+│   │   │       └── stock_card_test.dart
+│   │   └── domain/
+│   │       └── view_models/
+│   │           └── stock_list_view_model_test.dart
 │   ├── golden/
 │   │   └── goldens/
 │   └── fixtures/
@@ -525,13 +723,16 @@ Tests should run in this order in CI:
 
 ## Best Practices Summary
 
-1. **Write tests first** - Follow TDD strictly
-2. **Mock at boundaries** - Only mock external dependencies
-3. **Use realistic fixtures** - Domain-specific test data over random data
-4. **Keep tests focused** - One assertion per test when possible
-5. **Test behavior, not implementation** - Tests should survive refactoring
-6. **Maintain test quality** - Tests need the same care as production code
-7. **Run tests frequently** - Before every commit
-8. **Update goldens carefully** - Review visual changes before approving
+1. **Write meaningful tests** - Never write trivial tests to game coverage metrics
+2. **Write tests first** - Follow TDD strictly
+3. **Mirror source structure** - Test directory must exactly match source directory structure
+4. **Always use fixtures** - Never create test data inline, use consistent fixtures
+5. **Mock at boundaries** - Only mock external dependencies
+6. **Use realistic fixtures** - Domain-specific test data over random data
+7. **Keep tests focused** - One assertion per test when possible
+8. **Test behavior, not implementation** - Tests should survive refactoring
+9. **Maintain test quality** - Tests need the same care as production code
+10. **Run tests frequently** - Before every commit
+11. **Update goldens carefully** - Review visual changes before approving
 
-Remember: Tests are documentation of intended behavior. Write them clearly and maintain them well.
+Remember: Tests are documentation of intended behavior. Write them clearly and maintain them well. Coverage requirements exist to encourage quality, not to be gamed.
