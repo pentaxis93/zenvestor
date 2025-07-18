@@ -35,6 +35,7 @@ analyze_project_coverage() {
         if [ "$project" = "zenvestor_server" ]; then
             dart test --coverage=coverage >/dev/null 2>&1
             dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib >/dev/null 2>&1
+            lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info >/dev/null 2>&1
         else
             flutter test --coverage >/dev/null 2>&1
         fi
@@ -61,12 +62,14 @@ analyze_project_coverage() {
         if [[ $line == SF:* ]]; then
             # Process previous file if exists
             if [ -n "$current_file" ] && [ $lines_total -gt 0 ]; then
-                total_files=$((total_files + 1))
-                coverage=$(echo "scale=1; $lines_hit * 100 / $lines_total" | bc)
-                
-                # Show file if it has any untested lines
-                if [ ${#uncovered_lines[@]} -gt 0 ]; then
-                    files_with_untested=$((files_with_untested + 1))
+                # Skip generated files
+                if [[ ! "$current_file" =~ generated/ ]]; then
+                    total_files=$((total_files + 1))
+                    coverage=$(echo "scale=1; $lines_hit * 100 / $lines_total" | bc)
+                    
+                    # Show file if it has any untested lines
+                    if [ ${#uncovered_lines[@]} -gt 0 ]; then
+                        files_with_untested=$((files_with_untested + 1))
                     if [ "$coverage" = "100.0" ]; then
                         printf "${GREEN}%-60s %5.1f%%${NC}\n" "$current_file" "$coverage"
                     else
@@ -123,6 +126,7 @@ analyze_project_coverage() {
                         echo ""
                     fi
                 fi
+                fi
             fi
             
             # Start new file
@@ -148,12 +152,14 @@ analyze_project_coverage() {
     
     # Process last file
     if [ -n "$current_file" ] && [ $lines_total -gt 0 ]; then
-        total_files=$((total_files + 1))
-        coverage=$(echo "scale=1; $lines_hit * 100 / $lines_total" | bc)
-        
-        # Show file if it has any untested lines
-        if [ ${#uncovered_lines[@]} -gt 0 ]; then
-            files_with_untested=$((files_with_untested + 1))
+        # Skip generated files
+        if [[ ! "$current_file" =~ generated/ ]]; then
+            total_files=$((total_files + 1))
+            coverage=$(echo "scale=1; $lines_hit * 100 / $lines_total" | bc)
+            
+            # Show file if it has any untested lines
+            if [ ${#uncovered_lines[@]} -gt 0 ]; then
+                files_with_untested=$((files_with_untested + 1))
             if [ "$coverage" = "100.0" ]; then
                 printf "${GREEN}%-60s %5.1f%%${NC}\n" "$current_file" "$coverage"
             else
@@ -208,6 +214,7 @@ analyze_project_coverage() {
                 fi
                 echo ""
             fi
+        fi
         fi
     fi
     

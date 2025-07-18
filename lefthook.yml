@@ -34,6 +34,7 @@ pre-commit:
         cd zenvestor_server && \
         dart test --coverage=coverage && \
         dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
+        lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
         echo "Server test coverage: ${total}%" && \
         awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
@@ -58,6 +59,7 @@ pre-push:
         cd zenvestor_server && \
         dart test --coverage=coverage && \
         dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib && \
+        lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info && \
         total=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//') && \
         echo "Server test coverage: ${total}%" && \
         awk -v total="$total" 'BEGIN { if (total < 45) { print "❌ Coverage below 45% threshold"; exit 1 } else { print "✅ Coverage meets 45% threshold" } }'
