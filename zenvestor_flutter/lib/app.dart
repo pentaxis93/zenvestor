@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zenvestor_client/zenvestor_client.dart';
 import 'package:zenvestor_flutter/main.dart' show client;
 
 /// The root widget of the application.
@@ -43,8 +44,15 @@ class MyHomePageState extends State<MyHomePage> {
   /// `_resultMessage` or `_errorMessage` field, depending on if the call
   /// is successful.
   Future<void> _callHello() async {
+    await callHelloWithClient(client);
+  }
+
+  /// Internal method that accepts a client parameter for testing.
+  @visibleForTesting
+  Future<void> callHelloWithClient(Client testClient) async {
     try {
-      final result = await client.greeting.hello(_textEditingController.text);
+      final result =
+          await testClient.greeting.hello(_textEditingController.text);
       setState(() {
         _errorMessage = null;
         _resultMessage = result.message;

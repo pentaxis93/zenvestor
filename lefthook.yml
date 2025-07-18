@@ -36,18 +36,18 @@ pre-commit:
         server_coverage=$(echo "$output" | grep "Server:" | grep -oE "[0-9]+(\.[0-9]+)?") && \
         flutter_coverage=$(echo "$output" | grep "Flutter:" | grep -oE "[0-9]+(\.[0-9]+)?") && \
         echo "" && \
-        echo "Coverage threshold: 80%" && \
+        echo "Coverage threshold: 90%" && \
         echo "" && \
         # Check server coverage
-        if [ $(echo "$server_coverage < 80" | bc -l) -eq 1 ]; then
-          echo "❌ Server coverage ${server_coverage}% is below 80% threshold"
+        if [ $(echo "$server_coverage < 90" | bc -l) -eq 1 ]; then
+          echo "❌ Server coverage ${server_coverage}% is below 90% threshold"
           exit 1
         else
           echo "✅ Server coverage ${server_coverage}% meets threshold"
         fi && \
         # Check flutter coverage
-        if [ $(echo "$flutter_coverage < 80" | bc -l) -eq 1 ]; then
-          echo "❌ Flutter coverage ${flutter_coverage}% is below 80% threshold"
+        if [ $(echo "$flutter_coverage < 90" | bc -l) -eq 1 ]; then
+          echo "❌ Flutter coverage ${flutter_coverage}% is below 90% threshold"
           exit 1
         else
           echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
@@ -67,18 +67,18 @@ pre-push:
         server_coverage=$(echo "$output" | grep "Server:" | grep -oE "[0-9]+(\.[0-9]+)?") && \
         flutter_coverage=$(echo "$output" | grep "Flutter:" | grep -oE "[0-9]+(\.[0-9]+)?") && \
         echo "" && \
-        echo "Coverage threshold: 80%" && \
+        echo "Coverage threshold: 90%" && \
         echo "" && \
         # Check server coverage
-        if [ $(echo "$server_coverage < 80" | bc -l) -eq 1 ]; then
-          echo "❌ Server coverage ${server_coverage}% is below 80% threshold"
+        if [ $(echo "$server_coverage < 90" | bc -l) -eq 1 ]; then
+          echo "❌ Server coverage ${server_coverage}% is below 90% threshold"
           exit 1
         else
           echo "✅ Server coverage ${server_coverage}% meets threshold"
         fi && \
         # Check flutter coverage
-        if [ $(echo "$flutter_coverage < 80" | bc -l) -eq 1 ]; then
-          echo "❌ Flutter coverage ${flutter_coverage}% is below 80% threshold"
+        if [ $(echo "$flutter_coverage < 90" | bc -l) -eq 1 ]; then
+          echo "❌ Flutter coverage ${flutter_coverage}% is below 90% threshold"
           exit 1
         else
           echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
