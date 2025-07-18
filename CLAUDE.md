@@ -1,5 +1,13 @@
 # AI Assistant Guidelines for Zenvestor Development
 
+## Documentation Discovery
+
+Before starting any development task, scan the `/docs/development-guides/` directory to discover available documentation:
+- Use the LS tool to list all files in `/docs/development-guides/`
+- Review the filenames to understand what documentation is available
+- Read relevant guides based on the task at hand (e.g., TEST_WRITING_GUIDE.md for testing tasks, ARCHITECTURE_GUIDE.md for architectural decisions)
+- The documentation in this directory contains essential development practices that must be followed
+
 ## Core Development Principles
 
 ### Test-Driven Development (TDD)
@@ -11,7 +19,7 @@
   - Refactor the code for clarity and maintainability while keeping tests green
   - For Flutter widgets: Write widget tests before implementing the UI
   - For Serverpod endpoints: Write integration tests before implementing the endpoint
-  - **IMPORTANT**: Read and follow `/docs/TEST_WRITING_GUIDE.md` for detailed testing practices including:
+  - **IMPORTANT**: Read and follow `/docs/development-guides/TEST_WRITING_GUIDE.md` for detailed testing practices including:
     - Using mocktail for mocking dependencies
     - Using alchemist for golden testing
     - Creating domain-specific test fixtures instead of generic faker data
