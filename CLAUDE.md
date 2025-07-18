@@ -11,6 +11,11 @@
   - Refactor the code for clarity and maintainability while keeping tests green
   - For Flutter widgets: Write widget tests before implementing the UI
   - For Serverpod endpoints: Write integration tests before implementing the endpoint
+  - **IMPORTANT**: Read and follow `/docs/TEST_WRITING_GUIDE.md` for detailed testing practices including:
+    - Using mocktail for mocking dependencies
+    - Using alchemist for golden testing
+    - Creating domain-specific test fixtures instead of generic faker data
+    - Following proper test organization and naming conventions
 
 ### Type Safety
 
