@@ -1,0 +1,36 @@
+# Gitleaks configuration for Zenvestor
+# This file configures gitleaks to properly handle test secrets and avoid false positives
+
+[extend]
+# Extend the base configuration
+useDefault = true
+
+[allowlist]
+# Global allowlist for files that should never be scanned
+paths = [
+  # Git internals
+  '''\.git/''',
+  # Build artifacts
+  '''\.dart_tool/''',
+  '''build/''',
+  '''\.flutter-plugins''',
+  '''\.packages''',
+  # Example/template files
+  '''\.example''',
+  '''\.sample''',
+  '''\.template'''
+]
+
+# Allow high-entropy strings in test files
+files = [
+  '''(.*?)(test|spec)(.*)\.dart''',
+  '''pubspec\.lock''',
+  '''package-lock\.json'''
+]
+
+# Custom rule for Serverpod passwords.yaml files
+[[rules]]
+id = "serverpod-passwords-yaml"
+description = "Serverpod passwords.yaml file - any high-entropy values"
+path = '''passwords\.yaml$'''
+regex = '''(?i)(database|redis):\s*["']?([a-zA-Z0-9\-_]{16,})["']?'''

@@ -21,3 +21,11 @@ Thumbs.db
 # Coverage reports
 coverage/
 *.lcov
+
+# Environment files
+.env
+!.env.example
+
+# Serverpod passwords
+**/config/passwords.yaml
+!**/config/passwords.example.yaml

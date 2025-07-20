@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: zenvestor
-      POSTGRES_PASSWORD: "***REMOVED***"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     volumes:
       - zenvestor_data:/var/lib/postgresql/data
 
@@ -15,7 +15,7 @@ services:
     image: redis:6.2.6
     ports:
       - "8091:6379"
-    command: redis-server --requirepass "45AcfzbQFmLBKrq6TULxmlHqIO5syvTq"
+    command: redis-server --requirepass "${REDIS_PASSWORD}"
     environment:
       - REDIS_REPLICATION_MODE=master
 
@@ -27,7 +27,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: zenvestor_test
-      POSTGRES_PASSWORD: "***REMOVED***"
+      POSTGRES_PASSWORD: "${POSTGRES_TEST_PASSWORD}"
     volumes:
       - zenvestor_test_data:/var/lib/postgresql/data
 
@@ -35,7 +35,7 @@ services:
     image: redis:6.2.6
     ports:
       - "9091:6379"
-    command: redis-server --requirepass "***REMOVED***"
+    command: redis-server --requirepass "${REDIS_TEST_PASSWORD}"
     environment:
       - REDIS_REPLICATION_MODE=master
 

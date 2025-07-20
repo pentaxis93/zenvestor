@@ -20,6 +20,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history for better secret detection
+      
+      # Secret Scanning with Gitleaks
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Check for committed secrets files
+      - name: Check for committed secrets files
+        run: |
+          echo "🔍 Checking for accidentally committed secret files..."
+          found_files=false
+          
+          if [ -f "zenvestor_server/.env" ]; then
+            echo "❌ ERROR: Found zenvestor_server/.env"
+            found_files=true
+          fi
+          
+          if [ -f "zenvestor_server/config/passwords.yaml" ]; then
+            echo "❌ ERROR: Found zenvestor_server/config/passwords.yaml"
+            found_files=true
+          fi
+          
+          if [ "$found_files" = true ]; then
+            echo ""
+            echo "Secret files must never be committed to version control!"
+            echo "Add them to .gitignore and remove from the repository."
+            exit 1
+          else
+            echo "✅ No secret files found in repository"
+          fi
+      
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:

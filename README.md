@@ -35,6 +35,8 @@ A comprehensive investment portfolio management application built with Serverpod
    cd zenvestor_server
    docker-compose up -d
    ```
+   
+   Note: The `.env` file with test passwords is already configured for local development.
 
 4. **Run the server**:
    ```bash
@@ -118,6 +120,42 @@ After modifying `.yaml` protocol files:
 cd zenvestor_server
 serverpod generate
 ```
+
+## 🔒 Security
+
+### Password Management
+
+This project uses environment variables and configuration files to manage passwords:
+
+- **Local Development**: Test passwords are provided in `.env` and `config/passwords.yaml`
+- **Production**: Never use the test passwords in production environments
+- **CI/CD**: Uses GitHub secrets for test passwords (no hardcoded values)
+
+### Important Security Files
+
+- `.env` - Contains actual passwords (gitignored)
+- `.env.example` - Template for environment variables
+- `config/passwords.yaml` - Serverpod password configuration (gitignored)
+- `config/passwords.example.yaml` - Template for Serverpod passwords
+
+**Never commit files containing real passwords to version control!**
+
+### GitHub Secrets Setup (For Contributors)
+
+If you're forking this repository or setting up CI/CD, you'll need to configure the following GitHub secrets:
+
+1. Go to your repository's Settings → Secrets and variables → Actions
+2. Add the following repository secrets:
+   - `TEST_POSTGRES_PASSWORD`: Password for test PostgreSQL database
+   - `TEST_REDIS_PASSWORD`: Password for test Redis instance
+
+Or use the GitHub CLI:
+```bash
+gh secret set TEST_POSTGRES_PASSWORD -b "your-test-postgres-password"
+gh secret set TEST_REDIS_PASSWORD -b "your-test-redis-password"
+```
+
+These are only used for running tests in CI and don't need to be highly secure.
 
 ## 📋 Development Guidelines
 
