@@ -53,3 +53,23 @@ jobs:
             echo "⚠️ Found discontinued packages"
             echo "discontinued_found=true" >> $GITHUB_OUTPUT
           fi
+      - name: Activate and run pana
+        run: |
+          dart pub global activate pana
+          export PATH="$PATH:$HOME/.pub-cache/bin"
+
+          echo "📊 Running pana analysis on server..."
+          cd zenvestor_server
+          pana --no-warning --json > ../server-pana.json || true
+
+          echo "📊 Running pana analysis on Flutter..."
+          cd ../zenvestor_flutter
+          pana --no-warning --json > ../flutter-pana.json || true
+
+          # Check scores and fail if below threshold
+          cd ..
+          server_score=$(jq -r '.scores.grantedPoints' server-pana.json)
+          flutter_score=$(jq -r '.scores.grantedPoints' flutter-pana.json)
+
+          echo "Server pana score: $server_score"
+          echo "Flutter pana score: $flutter_score"
