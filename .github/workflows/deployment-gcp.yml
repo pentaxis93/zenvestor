@@ -76,6 +76,22 @@ jobs:
       - name: Build the Docker image
         working-directory: zenvestor_server
         run: "docker build -t $IMAGE_NAME ."
+      
+      - name: Run Trivy container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_NAME }}'
+          format: 'sarif'
+          output: 'trivy-container.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '1'  # Block on all severities
+      
+      - name: Upload container scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-container.sarif'
+          category: 'trivy-container'
 
       - name: Tag the Docker image
         working-directory: zenvestor_server

@@ -15,6 +15,10 @@ concurrency:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -105,3 +109,21 @@ jobs:
 
           echo "Server pana score: $server_score"
           echo "Flutter pana score: $flutter_score"
+      
+      # Trivy Vulnerability Scanning
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          exit-code: '1'  # Block on all severities
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-filesystem'

@@ -53,6 +53,16 @@ pre-commit:
           echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
         fi && \
         echo "✅ All tests complete"
+    
+    # Phase 4: Security Scanning with Trivy
+    trivy-scan:
+      run: |
+        echo "🛡️ Running Trivy security scan..." && \
+        trivy fs . \
+          --exit-code 1 \
+          --severity CRITICAL,HIGH,MEDIUM,LOW \
+          --format table && \
+        echo "✅ Trivy scan complete - no vulnerabilities found"
 
 # Pre-push hook to run tests with coverage before pushing
 # Tests require database to be running via docker-compose
@@ -84,3 +94,12 @@ pre-push:
           echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
         fi
       tags: test
+    
+    trivy-scan-push:
+      run: |
+        echo "🛡️ Running Trivy security scan before push..." && \
+        trivy fs . \
+          --exit-code 1 \
+          --severity CRITICAL,HIGH,MEDIUM,LOW \
+          --format table && \
+        echo "✅ Trivy scan complete - no vulnerabilities found"
