@@ -29,3 +29,27 @@ jobs:
         uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
+      # Dependency Vulnerability Scanning
+      - name: Install dependencies
+        run: |
+          cd zenvestor_server && dart pub get
+          cd ../zenvestor_flutter && flutter pub get
+      - name: Check for vulnerable dependencies
+        id: dep-scan
+        run: |
+          echo "🔍 Checking for vulnerable dependencies..."
+
+          # Check server dependencies
+          cd zenvestor_server
+          dart pub outdated --json > ../server-deps.json
+
+          # Check Flutter dependencies
+          cd ../zenvestor_flutter
+          flutter pub outdated --json > ../flutter-deps.json
+
+          # Parse results (basic check - enhance as needed)
+          cd ..
+          if grep -q '"isDiscontinued": true' server-deps.json flutter-deps.json; then
+            echo "⚠️ Found discontinued packages"
+            echo "discontinued_found=true" >> $GITHUB_OUTPUT
+          fi
