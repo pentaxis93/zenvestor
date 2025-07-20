@@ -1,0 +1,114 @@
+# Dependabot configuration for Zenvestor
+# This file configures automated dependency updates for both our Dart/Serverpod backend
+# and Flutter frontend to ensure we stay current with security patches and new features.
+
+version: 2
+updates:
+  # Backend Dependencies - Serverpod Server
+  # Updates Dart packages used in our backend services including Serverpod framework,
+  # database drivers, and server utilities. These are critical for API stability.
+  - package-ecosystem: "pub"
+    directory: "/zenvestor_server"
+    schedule:
+      # Monday mornings align with sprint planning, giving us the week to review
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    # Limit concurrent PRs to avoid overwhelming code review process
+    open-pull-requests-limit: 3
+    # Group updates by dependency type for easier review
+    groups:
+      # Production dependencies that affect runtime behavior
+      production-dependencies:
+        dependency-type: "production"
+      # Development dependencies for testing, linting, and code generation
+      development-dependencies:
+        dependency-type: "development"
+    # Labels help categorize PRs in GitHub for better workflow management
+    labels:
+      - "dependencies"
+      - "backend"
+      - "automated"
+    # Use conventional commits format as defined in CLAUDE.md
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+
+  # Frontend Dependencies - Flutter Application
+  # Updates Flutter packages including UI libraries, state management, HTTP clients,
+  # and other packages critical for the mobile/web client experience.
+  - package-ecosystem: "pub"
+    directory: "/zenvestor_flutter"
+    schedule:
+      # Same schedule as backend for coordinated updates
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    # Separate limit from backend to manage review load
+    open-pull-requests-limit: 3
+    groups:
+      # Production dependencies including Flutter SDK constraints
+      production-dependencies:
+        dependency-type: "production"
+      # Development dependencies for testing and tooling
+      development-dependencies:
+        dependency-type: "development"
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+
+  # Generated Client Dependencies
+  # The Serverpod client is auto-generated but has its own dependencies that need updates.
+  # This ensures compatibility between server and client communication layers.
+  - package-ecosystem: "pub"
+    directory: "/zenvestor_client"
+    schedule:
+      # Same schedule for consistency across all projects
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    # Lower limit since this is generated code with fewer direct dependencies
+    open-pull-requests-limit: 2
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
+    labels:
+      - "dependencies"
+      - "client"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+
+  # GitHub Actions Workflows
+  # Keeps our CI/CD pipeline dependencies current, including action versions
+  # for security scanning, testing, and deployment workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      # Monthly updates for stability - actions change less frequently
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "ci/cd"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
