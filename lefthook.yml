@@ -63,6 +63,20 @@ pre-commit:
           --severity CRITICAL,HIGH,MEDIUM,LOW \
           --format table && \
         echo "✅ Trivy scan complete - no vulnerabilities found"
+    
+    # Phase 5: SAST with Semgrep
+    semgrep-scan:
+      run: |
+        echo "🔍 Running Semgrep SAST scan..." && \
+        semgrep \
+          --config=auto \
+          --config=p/security-audit \
+          --config=p/secrets \
+          --config=p/owasp-top-ten \
+          --autofix \
+          --error && \
+        git add -A && \
+        echo "✅ Semgrep scan complete - security issues fixed"
 
 # Pre-push hook to run tests with coverage before pushing
 # Tests require database to be running via docker-compose

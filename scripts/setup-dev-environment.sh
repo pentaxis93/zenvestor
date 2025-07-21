@@ -101,6 +101,61 @@ else
     print_error "Flutter is not installed. Please install Flutter SDK"
 fi
 
+# Install security tools
+echo ""
+echo "Installing security tools..."
+
+# Install Trivy
+echo "Installing Trivy..."
+if [ "$OS" = "Linux" ]; then
+    # Install via apt repository for Debian/Ubuntu
+    if command -v apt-get &> /dev/null; then
+        # Add Trivy repository
+        sudo apt-get update
+        sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install -y trivy
+    else
+        # Generic Linux installation
+        print_warning "Installing Trivy via binary download..."
+        TRIVY_VERSION=$(curl -s "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+        wget -O trivy.tar.gz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+        tar zxvf trivy.tar.gz
+        sudo mv trivy /usr/local/bin/
+        rm trivy.tar.gz
+    fi
+fi
+
+# Verify Trivy installation
+if command -v trivy &> /dev/null; then
+    print_status "Trivy installed: $(trivy --version | head -n1)"
+else
+    print_error "Failed to install Trivy"
+fi
+
+# Install Semgrep
+echo "Installing Semgrep..."
+if command -v pip3 &> /dev/null; then
+    pip3 install semgrep
+    print_status "Semgrep installed via pip3"
+elif command -v pip &> /dev/null; then
+    pip install semgrep
+    print_status "Semgrep installed via pip"
+else
+    print_error "pip/pip3 not found. Please install Python pip to install Semgrep"
+    print_warning "You can install pip with: sudo apt-get install python3-pip"
+fi
+
+# Verify Semgrep installation
+if command -v semgrep &> /dev/null; then
+    print_status "Semgrep installed: $(semgrep --version)"
+else
+    print_error "Failed to install Semgrep"
+    print_warning "Make sure Python pip is installed and ~/.local/bin is in your PATH"
+fi
+
 echo ""
 echo "✅ Development environment setup complete!"
 echo ""
