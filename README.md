@@ -1,5 +1,7 @@
 # Zenvestor
 
+[![Security Scan](https://github.com/pentaxis93/zenvestor/actions/workflows/security.yml/badge.svg)](https://github.com/pentaxis93/zenvestor/actions/workflows/security.yml)
+
 A comprehensive investment portfolio management application built with Serverpod and Flutter.
 
 ## 🚀 Getting Started
