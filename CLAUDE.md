@@ -18,6 +18,15 @@ Then scan the `/docs/development-guides/` directory for implementation practices
 - Read relevant guides based on the task at hand (e.g., TEST_WRITING_GUIDE.md for testing tasks, ARCHITECTURE_GUIDE.md for architectural decisions)
 - The documentation in this directory contains essential development practices that must be followed
 
+### Serverpod Documentation
+For detailed Serverpod-specific implementation guidance, reference `/docs/serverpod-docs/`:
+- **Get Started** (`/01-get-started/`) - Creating endpoints, models, database operations, deployment
+- **Concepts** (`/06-concepts/`) - Working with endpoints, models, database relations, authentication, testing
+- **Database** (`/06-concepts/06-database/`) - CRUD operations, relations, transactions, migrations
+- **Authentication** (`/06-concepts/11-authentication/`) - Setup, providers (email, Google, Apple, Firebase), custom implementations
+- **Testing** (`/06-concepts/19-testing/`) - Testing strategies and best practices for Serverpod
+- **Deployments** (`/07-deployments/`) - Deployment strategies for GCP, AWS, and other platforms
+
 ## Core Development Principles
 
 ### Test-Driven Development (TDD)
@@ -55,6 +64,8 @@ Then scan the `/docs/development-guides/` directory for implementation practices
 - Use dartdoc comments (`///`) for all public APIs
 
 ## Serverpod-Specific Guidelines
+
+**Note**: For detailed Serverpod concepts and implementation patterns, consult `/docs/serverpod-docs/`. This documentation provides comprehensive guidance on Serverpod features, best practices, and advanced patterns.
 
 ### Project Structure
 

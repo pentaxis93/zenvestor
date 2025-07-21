@@ -31,9 +31,9 @@ Traditional clean architecture often includes:
 - Boilerplate CRUD operations
 
 Serverpod's code generation provides:
-- **Automatic DTOs** from YAML definitions
+- **Automatic DTOs** from YAML definitions (see `/docs/serverpod-docs/06-concepts/02-models.md`)
 - **Type-safe client-server contracts**
-- **Database operation implementations**
+- **Database operation implementations** (see `/docs/serverpod-docs/06-concepts/06-database/`)
 - **Serialization/deserialization logic**
 
 This allows us to focus on business logic rather than plumbing code.
@@ -175,6 +175,8 @@ indexes:
     fields: symbol
     unique: true
 ```
+
+> **Note**: For comprehensive model definition options including relations, indices, and advanced features, see `/docs/serverpod-docs/06-concepts/02-models.md` and `/docs/serverpod-docs/06-concepts/06-database/02-models.md`
 
 **Note on Redundancy**: This YAML file defines the structure that will also appear in the domain entity below. This redundancy is unavoidable but manageable by keeping these files together.
 
@@ -730,6 +732,7 @@ class StockRepository implements domain.StockRepository {
       final dto = StockMapper.toDto(stock);
 
       // Use Serverpod's generated database operations
+      // See /docs/serverpod-docs/06-concepts/06-database/05-crud.md for CRUD operations
       final savedDto = await generated.Stock.insert(_session, dto);
 
       // Convert back to domain entity
@@ -744,6 +747,7 @@ class StockRepository implements domain.StockRepository {
   Future<Either<DomainException, Stock>> getBySymbol(String symbol) async {
     try {
       // Use Serverpod's generated query methods
+      // See /docs/serverpod-docs/06-concepts/06-database/06-filter.md for filtering options
       final stocks = await generated.Stock.find(
         _session,
         where: (t) => t.symbol.equals(symbol),
@@ -1223,7 +1227,7 @@ Client Side:
 2. **Naming Convention**: Use consistent naming (e.g., `stock.yaml` → `stock.dart`)
 3. **Documentation**: Comment in entity files when fields mirror YAML
 4. **Code Reviews**: Always review YAML and entity changes together
-5. **Testing**: Write tests that verify mapping correctness
+5. **Testing**: Write tests that verify mapping correctness (see `/docs/serverpod-docs/06-concepts/19-testing/` for Serverpod testing patterns)
 
 ### Synchronization Checklist
 
@@ -1267,3 +1271,5 @@ Key takeaways:
 - **Clear development flow from domain to UI**
 
 The result is a maintainable, testable architecture that takes full advantage of Serverpod's capabilities while preserving Zenvestor's rich domain model and business logic.
+
+For deployment strategies and production considerations, refer to `/docs/serverpod-docs/07-deployments/` which covers various cloud platforms and deployment approaches.
