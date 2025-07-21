@@ -6,6 +6,12 @@ resource "aws_lb" "serverpod" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.api.id]
   subnets            = module.vpc.public_subnets
+  
+  access_logs {
+    bucket  = aws_s3_bucket.lb_logs.bucket
+    prefix  = "serverpod-lb"
+    enabled = true
+  }
 }
 
 resource "aws_security_group" "api" {
@@ -39,6 +45,7 @@ resource "aws_lb_listener" "api" {
   port              = "443"
   protocol          = "HTTPS"
   certificate_arn   = var.certificate_arn
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-Res-2021-06"
 
   default_action {
     type             = "forward"
@@ -138,11 +145,15 @@ resource "aws_lb_listener" "web" {
   load_balancer_arn = aws_lb.serverpod.arn
   port              = "80"
   protocol          = "HTTP"
-  # certificate_arn   = var.certificate_arn
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.web.arn
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 

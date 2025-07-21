@@ -11,8 +11,9 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [
     aws_security_group.database.id
   ]
-  publicly_accessible  = true
+  publicly_accessible  = false
   db_subnet_group_name = module.vpc.database_subnet_group_name
+  enabled_cloudwatch_logs_exports = ["postgresql"]
 }
 
 resource "aws_route53_record" "database" {
@@ -23,13 +24,22 @@ resource "aws_route53_record" "database" {
   records = ["${aws_db_instance.postgres.address}"]
 }
 
-# Makes the database accessible from anywhere.
+# Database security group - restricts access to VPC only
 resource "aws_security_group" "database" {
-  name = "${var.project_name}-database"
+  name   = "${var.project_name}-database"
+  vpc_id = module.vpc.vpc_id
+  
   ingress {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
+    cidr_blocks = [module.vpc.vpc_cidr_block]
+  }
+  
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -50,8 +60,9 @@ resource "aws_db_instance" "postgres_staging" {
   vpc_security_group_ids = [
     aws_security_group.database.id
   ]
-  publicly_accessible  = true
+  publicly_accessible  = false
   db_subnet_group_name = module.vpc.database_subnet_group_name
+  enabled_cloudwatch_logs_exports = ["postgresql"]
 }
 
 resource "aws_route53_record" "database_staging" {

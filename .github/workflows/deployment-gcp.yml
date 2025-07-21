@@ -34,7 +34,9 @@ jobs:
 
       - name: Setting Target Mode from Input
         if: ${{ github.event.inputs.target != '' }}
-        run: echo "TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
+        env:
+          TARGET_INPUT: ${{ github.event.inputs.target }}
+        run: echo "TARGET=$TARGET_INPUT" >> $GITHUB_ENV
 
       - name: Setting Target mode based on branch
         if: ${{ github.event.inputs.target == '' }}

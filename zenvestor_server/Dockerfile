@@ -30,10 +30,15 @@ COPY --from=build /app/migrations/ migrations/
 # This file is required to enable the endpoint log filter in Insights.
 COPY --from=build /app/lib/src/generated/protocol.yaml lib/src/generated/protocol.yaml
 
+# Create non-root user
+RUN adduser -D -u 1001 serverpod
+RUN chown -R serverpod:serverpod /server /config /web /migrations /lib
+
 # Expose ports
 EXPOSE 8080
 EXPOSE 8081
 EXPOSE 8082
 
 # Define the entrypoint command
+USER serverpod
 ENTRYPOINT ./server --mode=$runmode --server-id=$serverid --logging=$logging --role=$role
