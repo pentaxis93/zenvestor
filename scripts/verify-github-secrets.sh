@@ -22,7 +22,7 @@ fi
 echo "Checking for required secrets..."
 secrets=$(gh secret list | awk '{print $1}')
 
-required_secrets=("TEST_POSTGRES_PASSWORD" "TEST_REDIS_PASSWORD")
+required_secrets=("POSTGRES_TEST_PASSWORD" "REDIS_TEST_PASSWORD")
 missing_secrets=()
 
 for secret in "${required_secrets[@]}"; do

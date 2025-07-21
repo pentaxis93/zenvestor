@@ -146,13 +146,13 @@ If you're forking this repository or setting up CI/CD, you'll need to configure 
 
 1. Go to your repository's Settings → Secrets and variables → Actions
 2. Add the following repository secrets:
-   - `TEST_POSTGRES_PASSWORD`: Password for test PostgreSQL database
-   - `TEST_REDIS_PASSWORD`: Password for test Redis instance
+   - `POSTGRES_TEST_PASSWORD`: Password for test PostgreSQL database
+   - `REDIS_TEST_PASSWORD`: Password for test Redis instance
 
 Or use the GitHub CLI:
 ```bash
-gh secret set TEST_POSTGRES_PASSWORD -b "your-test-postgres-password"
-gh secret set TEST_REDIS_PASSWORD -b "your-test-redis-password"
+gh secret set POSTGRES_TEST_PASSWORD -b "your-test-postgres-password"
+gh secret set REDIS_TEST_PASSWORD -b "your-test-redis-password"
 ```
 
 These are only used for running tests in CI and don't need to be highly secure.
