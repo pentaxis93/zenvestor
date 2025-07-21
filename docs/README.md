@@ -4,6 +4,14 @@ This directory contains all technical documentation for the Zenvestor project. D
 
 ## 📁 Directory Structure
 
+### `/core-documents/` - Core Project Documentation
+Foundational documents that define the project's vision, architecture, and specifications. These should be the primary reference for understanding the project's purpose and design.
+
+- **zenvestor-project-brief.md** - High-level project overview and objectives
+- **zenvestor-prd.md** - Product requirements document with detailed feature specifications
+- **zenvestor-architecture.md** - Technical architecture and system design
+- **zenvestor-ux-spec.md** - User experience specifications and design guidelines
+
 ### `/development-guides/` - Permanent Development Guides
 Essential guides that should always be consulted by developers. These documents define our core development practices and standards.
 
@@ -25,9 +33,10 @@ Analysis documents and inventories that help understand the current state of the
 ## 📋 Usage Guidelines
 
 ### For New Developers
-1. Start by reading all documents in `/development-guides/` to understand our development approach
-2. Pay special attention to `ARCHITECTURE_GUIDE.md` and `TEST_WRITING_GUIDE.md`
-3. Reference these guides frequently during development
+1. Begin with the core documents in `/core-documents/` to understand the project vision and architecture
+2. Read all documents in `/development-guides/` to understand our development approach
+3. Pay special attention to `ARCHITECTURE_GUIDE.md` and `TEST_WRITING_GUIDE.md`
+4. Reference these guides frequently during development
 
 ### When Implementing Features
 1. Check if there's an existing implementation plan in `/feature-plans/`

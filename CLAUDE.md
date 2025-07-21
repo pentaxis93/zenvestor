@@ -2,7 +2,17 @@
 
 ## Documentation Discovery
 
-Before starting any development task, scan the `/docs/development-guides/` directory to discover available documentation:
+Before starting any development task, review the core project context and development guides:
+
+### Core Documents
+Start with the `/docs/core-documents/` directory to understand the project's foundation:
+- **zenvestor-project-brief.md** - Read this first for high-level project context
+- **zenvestor-prd.md** - Consult for detailed feature requirements and specifications
+- **zenvestor-architecture.md** - Reference for technical architecture decisions
+- **zenvestor-ux-spec.md** - Review for UI/UX guidelines and design patterns
+
+### Development Guides
+Then scan the `/docs/development-guides/` directory for implementation practices:
 - Use the LS tool to list all files in `/docs/development-guides/`
 - Review the filenames to understand what documentation is available
 - Read relevant guides based on the task at hand (e.g., TEST_WRITING_GUIDE.md for testing tasks, ARCHITECTURE_GUIDE.md for architectural decisions)
