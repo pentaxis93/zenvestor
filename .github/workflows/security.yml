@@ -129,18 +129,20 @@ jobs:
           category: 'trivy-filesystem'
       
       # SAST with Semgrep
+      - name: Install Semgrep
+        if: always()
+        run: pip install semgrep
+      
       - name: Run Semgrep
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: >-
-            p/security-audit
-            p/secrets
-            p/owasp-top-ten
-          generateSarif: true
+        if: always()
+        run: |
+          semgrep scan \
+            --config=p/security-audit --config=p/secrets --config=p/owasp-top-ten \
+            --sarif --output=semgrep.sarif .
 
       - name: Upload Semgrep results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: semgrep.sarif
+          sarif_file: 'semgrep.sarif'
           category: 'semgrep'
