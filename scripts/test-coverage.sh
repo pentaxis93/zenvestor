@@ -14,10 +14,14 @@ else
     CORES=4  # Fallback to 4 cores if detection fails
 fi
 
-# Check if lcov is installed
-if ! command -v lcov &> /dev/null; then
-    echo "lcov not installed"
-    exit 1
+# Check if dlcov is installed
+if ! command -v dlcov &> /dev/null; then
+    echo "dlcov not installed. Installing..."
+    dart pub global activate dlcov >/dev/null 2>&1
+    if ! command -v dlcov &> /dev/null; then
+        echo "Failed to install dlcov. Please run: dart pub global activate dlcov"
+        exit 1
+    fi
 fi
 
 echo "Measuring test coverage (using $CORES cores)..."
@@ -29,12 +33,18 @@ echo "Running tests in parallel..."
 # Start server tests in background
 (
     cd "$PROJECT_ROOT/zenvestor_server" && \
-    if dart test --coverage=coverage -j $CORES >/dev/null 2>&1; then
-        # Convert JSON coverage to lcov format
-        dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib >/dev/null 2>&1
-        # Remove generated files from coverage
-        lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info >/dev/null 2>&1
-        server_coverage=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//' | head -1)
+    # Generate references for all source files to ensure accurate coverage
+    dlcov gen-refs >/dev/null 2>&1 && \
+    # Run tests with coverage (use flutter test for proper coverage collection)
+    if flutter test --coverage --concurrency=$CORES >/dev/null 2>&1; then
+        # Use dlcov to check coverage, including untested files
+        # Exclude demo files that will be removed
+        # Capture the output to extract the percentage
+        dlcov_output=$(dlcov -c 0 --include-untested-files=true \
+            --exclude-suffix=".g.dart,.freezed.dart" \
+            --exclude-files="lib/src/generated/*,lib/src/birthday_reminder.dart,lib/src/web/routes/root.dart,lib/src/web/widgets/built_with_serverpod_page.dart,lib/server.dart,lib/src/greeting_endpoint.dart" 2>&1)
+        # Extract coverage percentage from dlcov output
+        server_coverage=$(echo "$dlcov_output" | grep -oE "coverage [0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1)
         echo "server:${server_coverage:-0}" > /tmp/server_coverage.tmp
     else
         echo "server:0" > /tmp/server_coverage.tmp
@@ -45,10 +55,15 @@ server_pid=$!
 # Start flutter tests in background
 (
     cd "$PROJECT_ROOT/zenvestor_flutter" && \
+    # Generate references for all source files to ensure accurate coverage
+    dlcov gen-refs >/dev/null 2>&1 && \
+    # Run tests with coverage
     if flutter test --coverage --concurrency=$CORES >/dev/null 2>&1; then
-        # Remove main.dart from coverage
-        lcov --remove coverage/lcov.info 'lib/main.dart' -o coverage/lcov.info >/dev/null 2>&1
-        flutter_coverage=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//' | head -1)
+        # Use dlcov to check coverage, including untested files
+        # Exclude main.dart and generated files
+        dlcov_output=$(dlcov -c 0 --include-untested-files=true --exclude-suffix=".g.dart,.freezed.dart" --exclude-files="lib/main.dart" 2>&1)
+        # Extract coverage percentage from dlcov output
+        flutter_coverage=$(echo "$dlcov_output" | grep -oE "coverage [0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1)
         echo "flutter:${flutter_coverage:-0}" > /tmp/flutter_coverage.tmp
     else
         echo "flutter:0" > /tmp/flutter_coverage.tmp

@@ -21,6 +21,8 @@ Thumbs.db
 # Coverage reports
 coverage/
 *.lcov
+dlcov.log
+**/test/dlcov_references_test.dart
 
 # Environment files
 .env

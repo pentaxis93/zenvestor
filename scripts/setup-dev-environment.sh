@@ -91,6 +91,14 @@ echo ""
 echo "Checking Dart and Flutter setup..."
 if command -v dart &> /dev/null; then
     print_status "Dart is installed: $(dart --version 2>&1 | head -n1)"
+    
+    # Install dlcov for accurate code coverage
+    echo "Installing dlcov for code coverage..."
+    if dart pub global activate dlcov; then
+        print_status "dlcov installed successfully"
+    else
+        print_error "Failed to install dlcov"
+    fi
 else
     print_error "Dart is not installed. Please install Dart SDK"
 fi
