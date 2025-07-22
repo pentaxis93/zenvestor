@@ -16,14 +16,23 @@ pre-commit:
     01-auto-fix:
       run: |
         echo "🔧 Auto-fixing code issues..." && \
+        # Get list of originally staged files
+        staged_files=$(git diff --staged --name-only) && \
         # Run dart fix and format in parallel for both projects
         (cd zenvestor_server && dart fix --apply && dart format .) & \
         server_pid=$! && \
         (cd zenvestor_flutter && dart fix --apply && dart format .) & \
         flutter_pid=$! && \
         wait $server_pid && wait $flutter_pid && \
-        # Stage all changes made by auto-fix and format
-        git add -A && \
+        # Re-stage only the originally staged files
+        if [ -n "$staged_files" ]; then
+          # Loop through staged files and re-add only those
+          echo "$staged_files" | while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              git add "$file"
+            fi
+          done
+        fi && \
         echo "✅ Auto-fix and formatting complete"
       skip:
         - merge
