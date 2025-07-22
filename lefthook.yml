@@ -4,31 +4,46 @@
 pre-commit:
   parallel: false  # Run phases sequentially
   commands:
-    # Phase 1: Auto-formatting (both run in parallel via shell)
-    format-all:
+    # Phase 1: Auto-fix and formatting (runs dart fix and format)
+    01-auto-fix-all:
       run: |
-        echo "🎨 Formatting code..." && \
-        (cd zenvestor_server && dart format . && git add -A) & \
-        (cd zenvestor_flutter && dart format . && git add -A) & \
-        wait && \
-        echo "✅ Formatting complete"
+        echo "🔧 Auto-fixing code issues..." && \
+        # Run dart fix first to fix linting issues
+        (cd zenvestor_server && dart fix --apply && dart format .) & \
+        server_pid=$! && \
+        (cd zenvestor_flutter && dart fix --apply && dart format .) & \
+        flutter_pid=$! && \
+        wait $server_pid && wait $flutter_pid && \
+        # Stage all changes made by auto-fix and format
+        git add -A && \
+        echo "✅ Auto-fix and formatting complete"
       skip:
         - merge
         - rebase
       
-    # Phase 2: Static Analysis (both run in parallel via shell)
-    analyze-all:
+    # Phase 2: Static Analysis with strict error checking
+    02-analyze-all:
       run: |
         echo "🔍 Analyzing code..." && \
-        (cd zenvestor_server && dart analyze --fatal-infos) & \
-        server_pid=$! && \
-        (cd zenvestor_flutter && flutter analyze --fatal-infos) & \
-        flutter_pid=$! && \
-        wait $server_pid && wait $flutter_pid && \
+        # Run analysis with fatal warnings to block on ANY issue
+        server_output=$(cd zenvestor_server && dart analyze --fatal-infos --fatal-warnings 2>&1) && \
+        server_exit=$? && \
+        flutter_output=$(cd zenvestor_flutter && flutter analyze --fatal-infos --fatal-warnings 2>&1) && \
+        flutter_exit=$? && \
+        # Show output
+        echo "Analyzing zenvestor_server..." && \
+        echo "$server_output" && \
+        echo "Analyzing zenvestor_flutter..." && \
+        echo "$flutter_output" && \
+        # Check exit codes
+        if [ $server_exit -ne 0 ] || [ $flutter_exit -ne 0 ]; then
+          echo "❌ Analysis failed - fix all warnings and errors before committing"
+          exit 1
+        fi && \
         echo "✅ Analysis complete"
       
     # Phase 3: Tests with Coverage
-    test-all:
+    03-test-all:
       run: |
         echo "🧪 Running tests with coverage..." && \
         output=$(./scripts/test-coverage.sh) && \
@@ -55,7 +70,7 @@ pre-commit:
         echo "✅ All tests complete"
     
     # Phase 4: Security Scanning with Trivy
-    trivy-scan:
+    04-trivy-scan:
       run: |
         echo "🛡️ Running Trivy security scan..." && \
         trivy fs . \
@@ -65,7 +80,7 @@ pre-commit:
         echo "✅ Trivy scan complete - no vulnerabilities found"
     
     # Phase 5: SAST with Semgrep
-    semgrep-scan:
+    05-semgrep-scan:
       run: |
         echo "🔍 Running Semgrep SAST scan..." && \
         semgrep \
