@@ -1,26 +1,19 @@
 # Lefthook configuration for Zenvestor
 # Git hooks for code quality enforcement
 
+# Output configuration to ensure error details are shown
+output:
+  - meta          # Print lefthook version
+  - summary       # Print summary block
+  - failure       # Print failed steps  
+  - execution_out # Print command output (crucial for seeing errors)
+  - execution_info # Print execution logs
+
 pre-commit:
   parallel: false  # Run groups sequentially
   commands:
-    # Group 1: Sequential operations (auto-fix → analyze)
-    01-fix-and-analyze:
-      run: |
-        echo "🔧 Phase 1: Auto-fix and Analysis" && \
-        lefthook run fix-and-analyze
-      
-    # Group 2: Parallel operations (tests, security scans)
-    02-parallel-checks:
-      run: |
-        echo "⚡ Phase 2: Parallel Checks" && \
-        lefthook run parallel-checks
-
-# Sequential group: auto-fix must complete before analysis
-fix-and-analyze:
-  parallel: false
-  commands:
-    auto-fix-all:
+    # Auto-fix first
+    01-auto-fix:
       run: |
         echo "🔧 Auto-fixing code issues..." && \
         # Run dart fix and format in parallel for both projects
@@ -35,26 +28,68 @@ fix-and-analyze:
       skip:
         - merge
         - rebase
-        
-    analyze-all:
+    
+    # Then analyze
+    02-analyze:
       run: |
-        echo "🔍 Analyzing code..." && \
+        echo "🔍 Analyzing code..."
         # Run analysis with fatal warnings to block on ANY issue
-        server_output=$(cd zenvestor_server && dart analyze --fatal-infos --fatal-warnings 2>&1) && \
-        server_exit=$? && \
-        flutter_output=$(cd zenvestor_flutter && flutter analyze --fatal-infos --fatal-warnings 2>&1) && \
-        flutter_exit=$? && \
-        # Show output
-        echo "Analyzing zenvestor_server..." && \
-        echo "$server_output" && \
-        echo "Analyzing zenvestor_flutter..." && \
-        echo "$flutter_output" && \
-        # Check exit codes
+        server_output=$(cd zenvestor_server && dart analyze --fatal-infos --fatal-warnings 2>&1)
+        server_exit=$?
+        flutter_output=$(cd zenvestor_flutter && flutter analyze --fatal-infos --fatal-warnings 2>&1)
+        flutter_exit=$?
+        
+        # Always show output
+        echo "Analyzing zenvestor_server..."
+        echo "$server_output"
+        echo ""
+        echo "Analyzing zenvestor_flutter..."
+        echo "$flutter_output"
+        
+        # Parse and collect issues
+        issues=""
+        issue_count=0
+        
+        # Parse server issues
+        if [ $server_exit -ne 0 ]; then
+          server_issues=$(echo "$server_output" | grep -E "^\s*(error|warning|info)" | sed 's/^[[:space:]]*//' || true)
+          if [ -n "$server_issues" ]; then
+            issues="${issues}📦 zenvestor_server issues:\n$server_issues\n\n"
+            issue_count=$((issue_count + $(echo "$server_issues" | wc -l)))
+          fi
+        fi
+        
+        # Parse flutter issues
+        if [ $flutter_exit -ne 0 ]; then
+          flutter_issues=$(echo "$flutter_output" | grep -E "^\s*(error|warning|info)" | sed 's/^[[:space:]]*//' || true)
+          if [ -n "$flutter_issues" ]; then
+            issues="${issues}📱 zenvestor_flutter issues:\n$flutter_issues\n"
+            issue_count=$((issue_count + $(echo "$flutter_issues" | wc -l)))
+          fi
+        fi
+        
+        # Show summary if there are issues
         if [ $server_exit -ne 0 ] || [ $flutter_exit -ne 0 ]; then
-          echo "❌ Analysis failed - fix all warnings and errors before committing"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "❌ ANALYSIS FAILED - Found $issue_count issue(s) that must be fixed:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo -e "$issues"
+          echo "💡 Fix these issues before committing. For auto-fixable issues, run:"
+          echo "   dart fix --apply (in the respective directory)"
+          echo ""
           exit 1
-        fi && \
+        fi
+        
         echo "✅ Analysis complete"
+    
+    # Parallel checks last
+    03-parallel-checks:
+      run: |
+        echo "⚡ Phase 3: Parallel Checks" && \
+        lefthook run parallel-checks
+
 
 # Parallel group: all these can run simultaneously
 parallel-checks:
