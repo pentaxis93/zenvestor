@@ -21,6 +21,7 @@ dependencies:
   cupertino_icons: ^1.0.5
   flutter:
     sdk: flutter
+  fpdart: ^1.1.1
   serverpod_flutter: 2.9.1
   zenvestor_client:
     path: ../zenvestor_client
