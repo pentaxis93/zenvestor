@@ -2,13 +2,28 @@
 # Git hooks for code quality enforcement
 
 pre-commit:
-  parallel: false  # Run phases sequentially
+  parallel: false  # Run groups sequentially
   commands:
-    # Phase 1: Auto-fix and formatting (runs dart fix and format)
-    01-auto-fix-all:
+    # Group 1: Sequential operations (auto-fix → analyze)
+    01-fix-and-analyze:
+      run: |
+        echo "🔧 Phase 1: Auto-fix and Analysis" && \
+        lefthook run fix-and-analyze
+      
+    # Group 2: Parallel operations (tests, security scans)
+    02-parallel-checks:
+      run: |
+        echo "⚡ Phase 2: Parallel Checks" && \
+        lefthook run parallel-checks
+
+# Sequential group: auto-fix must complete before analysis
+fix-and-analyze:
+  parallel: false
+  commands:
+    auto-fix-all:
       run: |
         echo "🔧 Auto-fixing code issues..." && \
-        # Run dart fix first to fix linting issues
+        # Run dart fix and format in parallel for both projects
         (cd zenvestor_server && dart fix --apply && dart format .) & \
         server_pid=$! && \
         (cd zenvestor_flutter && dart fix --apply && dart format .) & \
@@ -20,9 +35,8 @@ pre-commit:
       skip:
         - merge
         - rebase
-      
-    # Phase 2: Static Analysis with strict error checking
-    02-analyze-all:
+        
+    analyze-all:
       run: |
         echo "🔍 Analyzing code..." && \
         # Run analysis with fatal warnings to block on ANY issue
@@ -41,9 +55,12 @@ pre-commit:
           exit 1
         fi && \
         echo "✅ Analysis complete"
-      
-    # Phase 3: Tests with Coverage
-    03-test-all:
+
+# Parallel group: all these can run simultaneously
+parallel-checks:
+  parallel: true
+  commands:
+    test-all:
       run: |
         echo "🧪 Running tests with coverage..." && \
         output=$(./scripts/test-coverage.sh) && \
@@ -69,8 +86,7 @@ pre-commit:
         fi && \
         echo "✅ All tests complete"
     
-    # Phase 4: Security Scanning with Trivy
-    04-trivy-scan:
+    trivy-scan:
       run: |
         echo "🛡️ Running Trivy security scan..." && \
         trivy fs . \
@@ -79,8 +95,7 @@ pre-commit:
           --format table && \
         echo "✅ Trivy scan complete - no vulnerabilities found"
     
-    # Phase 5: SAST with Semgrep
-    05-semgrep-scan:
+    semgrep-scan:
       run: |
         echo "🔍 Running Semgrep SAST scan..." && \
         semgrep \
