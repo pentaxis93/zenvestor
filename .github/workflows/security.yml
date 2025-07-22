@@ -1,4 +1,5 @@
 name: Security Scan
+
 on:
   push:
     branches: ['**']
@@ -8,17 +9,32 @@ on:
     # Run weekly on Mondays at 9 AM UTC
     - cron: '0 9 * * 1'
   workflow_dispatch: # Allow manual trigger
+
 # Cancel in-progress runs when a new run is triggered
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
-  security-scan:
+  # Setup job for common preparations
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better secret detection
+
+      - name: Setup Zenvestor environment
+        uses: ./.github/actions/setup-zenvestor
+
+  # Parallel job: Secret scanning
+  secret-scan:
+    needs: setup
     runs-on: ubuntu-latest
     permissions:
       contents: read
       security-events: write
-      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,21 +71,18 @@ jobs:
           else
             echo "✅ No secret files found in repository"
           fi
-      
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.x'
-          channel: 'stable'
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
-      # Dependency Vulnerability Scanning
-      - name: Install dependencies
-        run: |
-          cd zenvestor_server && dart pub get
-          cd ../zenvestor_flutter && flutter pub get
+
+  # Parallel job: Dependency scanning
+  dependency-scan:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Zenvestor environment
+        uses: ./.github/actions/setup-zenvestor
+
       - name: Check for vulnerable dependencies
         id: dep-scan
         run: |
@@ -89,6 +102,7 @@ jobs:
             echo "⚠️ Found discontinued packages"
             echo "discontinued_found=true" >> $GITHUB_OUTPUT
           fi
+
       - name: Activate and run pana
         run: |
           dart pub global activate pana
@@ -104,13 +118,27 @@ jobs:
 
           # Check scores and fail if below threshold
           cd ..
-          server_score=$(jq -r '.scores.grantedPoints' server-pana.json)
-          flutter_score=$(jq -r '.scores.grantedPoints' flutter-pana.json)
+          server_score=$(jq -r '.scores.grantedPoints' server-pana.json 2>/dev/null || echo "0")
+          flutter_score=$(jq -r '.scores.grantedPoints' flutter-pana.json 2>/dev/null || echo "0")
 
           echo "Server pana score: $server_score"
           echo "Flutter pana score: $flutter_score"
+
+          # Store scores for summary
+          echo "server_score=$server_score" >> $GITHUB_OUTPUT
+          echo "flutter_score=$flutter_score" >> $GITHUB_OUTPUT
+
+  # Parallel job: Trivy vulnerability scanning
+  trivy-scan:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
-      # Trivy Vulnerability Scanning
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -127,14 +155,22 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
           category: 'trivy-filesystem'
+
+  # Parallel job: SAST with Semgrep
+  semgrep-scan:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
-      # SAST with Semgrep
       - name: Install Semgrep
-        if: always()
         run: pip install semgrep
       
       - name: Run Semgrep
-        if: always()
         run: |
           semgrep scan \
             --config=p/security-audit --config=p/secrets --config=p/owasp-top-ten \
@@ -146,3 +182,61 @@ jobs:
         with:
           sarif_file: 'semgrep.sarif'
           category: 'semgrep'
+
+  # Final job: Security summary
+  security-summary:
+    needs: [secret-scan, dependency-scan, trivy-scan, semgrep-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: read
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "## 🛡️ Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Secret scan status
+          if [ "${{ needs.secret-scan.result }}" == "success" ]; then
+            echo "| Secret Scan | ✅ Pass | No secrets detected |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Secret Scan | ❌ Fail | Secrets or secret files found |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Dependency scan status
+          if [ "${{ needs.dependency-scan.result }}" == "success" ]; then
+            echo "| Dependency Scan | ✅ Pass | No vulnerable dependencies |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Dependency Scan | ❌ Fail | Vulnerable dependencies found |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Trivy scan status
+          if [ "${{ needs.trivy-scan.result }}" == "success" ]; then
+            echo "| Trivy Scan | ✅ Pass | No vulnerabilities detected |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Trivy Scan | ⚠️ Warn | Vulnerabilities detected (see Security tab) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Semgrep scan status
+          if [ "${{ needs.semgrep-scan.result }}" == "success" ]; then
+            echo "| Semgrep SAST | ✅ Pass | No security issues found |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Semgrep SAST | ⚠️ Warn | Security issues found (see Security tab) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📝 Notes" >> $GITHUB_STEP_SUMMARY
+          echo "- Check the Security tab for detailed findings from Trivy and Semgrep" >> $GITHUB_STEP_SUMMARY
+          echo "- This scan runs on every push, PR, and weekly on Mondays" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check overall status
+        run: |
+          if [ "${{ needs.secret-scan.result }}" != "success" ] || \
+             [ "${{ needs.dependency-scan.result }}" != "success" ]; then
+            echo "❌ Critical security checks failed"
+            exit 1
+          else
+            echo "✅ All critical security checks passed"
+          fi

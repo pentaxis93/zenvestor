@@ -13,7 +13,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  analyze-and-test:
+  # Setup job that prepares the environment and caches dependencies
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate cache key
+        id: cache-key
+        run: echo "key=${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}-${{ hashFiles('**/pubspec.lock') }}" >> $GITHUB_OUTPUT
+
+      - name: Setup Zenvestor environment
+        uses: ./.github/actions/setup-zenvestor
+        with:
+          install-coverage-tools: 'true'
+
+  # Parallel job: Analyze server code
+  analyze-server:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Zenvestor environment
+        uses: ./.github/actions/setup-zenvestor
+
+      - name: Analyze server code
+        working-directory: zenvestor_server
+        run: dart analyze --fatal-infos --fatal-warnings
+
+  # Parallel job: Analyze Flutter code
+  analyze-flutter:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Zenvestor environment
+        uses: ./.github/actions/setup-zenvestor
+
+      - name: Analyze Flutter code
+        working-directory: zenvestor_flutter
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+  # Parallel job: Test server code
+  test-server:
+    needs: setup
     runs-on: ubuntu-latest
     
     # Service containers for database and cache
@@ -48,90 +98,116 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: Setup Zenvestor environment
+        uses: ./.github/actions/setup-zenvestor
         with:
-          flutter-version: '3.x'
-          channel: 'stable'
+          install-coverage-tools: 'true'
 
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
-
-      # Cache dependencies for faster builds
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            **/pubspec.lock
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      # Install dependencies
-      - name: Install server dependencies
-        working-directory: zenvestor_server
-        run: dart pub get
-
-      - name: Install Flutter dependencies
-        working-directory: zenvestor_flutter
-        run: flutter pub get
-
-      # Generate Serverpod code and activate coverage
-      - name: Generate Serverpod code and activate coverage
+      - name: Run server tests with coverage
         working-directory: zenvestor_server
         run: |
-          dart pub global activate serverpod_cli
-          dart pub global activate coverage
-          export PATH="$PATH:$HOME/.pub-cache/bin"
-          serverpod generate
-
-      # Install bc and lcov for coverage calculations
-      - name: Install coverage tools
-        run: sudo apt-get update && sudo apt-get install -y bc lcov
-
-      # Make test script executable
-      - name: Make test script executable
-        run: chmod +x ./scripts/test-coverage.sh
-
-      # Phase 1: Static Analysis
-      - name: Analyze server code
-        working-directory: zenvestor_server
-        run: dart analyze --fatal-infos
-
-      - name: Analyze Flutter code
-        working-directory: zenvestor_flutter
-        run: flutter analyze --fatal-infos
-
-      # Phase 2: Run Tests with Coverage
-      - name: Run tests with coverage check
-        run: |
-          echo "🧪 Running tests with coverage..."
-          output=$(./scripts/test-coverage.sh)
-          echo "$output"
-          server_coverage=$(echo "$output" | grep "Server:" | grep -oE "[0-9]+(\.[0-9]+)?")
-          flutter_coverage=$(echo "$output" | grep "Flutter:" | grep -oE "[0-9]+(\.[0-9]+)?")
-          echo ""
-          echo "Coverage threshold: 100%"
-          echo ""
-          # Check server coverage
-          if [ $(echo "$server_coverage < 100" | bc -l) -eq 1 ]; then
-            echo "❌ Server coverage ${server_coverage}% is below 100% threshold"
+          dart test --coverage=coverage -j $(nproc)
+          dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib
+          # Remove generated files from coverage
+          lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info
+          # Generate coverage report
+          coverage=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//' | head -1)
+          echo "Server coverage: ${coverage}%"
+          # Check coverage threshold
+          if [ $(echo "$coverage < 100" | bc -l) -eq 1 ]; then
+            echo "❌ Server coverage ${coverage}% is below 100% threshold"
             exit 1
           else
-            echo "✅ Server coverage ${server_coverage}% meets threshold"
+            echo "✅ Server coverage ${coverage}% meets threshold"
           fi
-          # Check flutter coverage
-          if [ $(echo "$flutter_coverage < 100" | bc -l) -eq 1 ]; then
-            echo "❌ Flutter coverage ${flutter_coverage}% is below 100% threshold"
-            exit 1
-          else
-            echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
-          fi
-          echo "✅ All tests complete"
         env:
-          # Serverpod uses SERVERPOD_PASSWORD_ prefix for password environment variables
           SERVERPOD_PASSWORD_database: ${{ secrets.POSTGRES_TEST_PASSWORD }}
           SERVERPOD_PASSWORD_redis: ${{ secrets.REDIS_TEST_PASSWORD }}
+
+      - name: Upload server coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage
+          path: zenvestor_server/coverage/
+
+  # Parallel job: Test Flutter code
+  test-flutter:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Zenvestor environment
+        uses: ./.github/actions/setup-zenvestor
+        with:
+          install-coverage-tools: 'true'
+
+      - name: Run Flutter tests with coverage
+        working-directory: zenvestor_flutter
+        run: |
+          flutter test --coverage --concurrency=$(nproc)
+          # Remove main.dart from coverage
+          lcov --remove coverage/lcov.info 'lib/main.dart' -o coverage/lcov.info
+          # Generate coverage report
+          coverage=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//' | head -1)
+          echo "Flutter coverage: ${coverage}%"
+          # Check coverage threshold
+          if [ $(echo "$coverage < 100" | bc -l) -eq 1 ]; then
+            echo "❌ Flutter coverage ${coverage}% is below 100% threshold"
+            exit 1
+          else
+            echo "✅ Flutter coverage ${coverage}% meets threshold"
+          fi
+
+      - name: Upload Flutter coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: zenvestor_flutter/coverage/
+
+  # Final job: Combine results and generate reports
+  coverage-report:
+    needs: [analyze-server, analyze-flutter, test-server, test-flutter]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-coverage'
+          path: coverage-reports
+
+      - name: Generate combined coverage report
+        run: |
+          echo "## 📊 Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Coverage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Add server coverage if available
+          if [ -f "coverage-reports/server-coverage/lcov.info" ]; then
+            server_cov=$(lcov --summary coverage-reports/server-coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" || echo "0%")
+            echo "| Server | $server_cov | ✅ |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add Flutter coverage if available
+          if [ -f "coverage-reports/flutter-coverage/lcov.info" ]; then
+            flutter_cov=$(lcov --summary coverage-reports/flutter-coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" || echo "0%")
+            echo "| Flutter | $flutter_cov | ✅ |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check job statuses
+        run: |
+          if [ "${{ needs.analyze-server.result }}" != "success" ] || \
+             [ "${{ needs.analyze-flutter.result }}" != "success" ] || \
+             [ "${{ needs.test-server.result }}" != "success" ] || \
+             [ "${{ needs.test-flutter.result }}" != "success" ]; then
+            echo "❌ One or more jobs failed"
+            exit 1
+          else
+            echo "✅ All jobs completed successfully"
+          fi

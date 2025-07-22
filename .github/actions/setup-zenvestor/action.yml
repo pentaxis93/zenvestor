@@ -1,0 +1,106 @@
+name: 'Setup Zenvestor'
+description: 'Composite action to setup Flutter, Dart, and dependencies for Zenvestor'
+inputs:
+  flutter-version:
+    description: 'Flutter version to use'
+    required: false
+    default: '3.x'
+  working-directory:
+    description: 'Working directory for the action'
+    required: false
+    default: '.'
+  install-coverage-tools:
+    description: 'Whether to install coverage tools (bc, lcov)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ inputs.flutter-version }}
+        channel: 'stable'
+        cache: true
+        cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'
+        cache-path: '${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:'
+
+    - name: Setup Dart
+      uses: dart-lang/setup-dart@v1
+      with:
+        sdk: stable
+
+    # Cache pub dependencies for faster builds
+    - name: Cache pub dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pub-cache
+          ${{ inputs.working-directory }}/zenvestor_server/.dart_tool
+          ${{ inputs.working-directory }}/zenvestor_flutter/.dart_tool
+          ${{ inputs.working-directory }}/zenvestor_client/.dart_tool
+        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}-
+          ${{ runner.os }}-pub-
+
+    # Cache Serverpod generated files
+    - name: Cache Serverpod generated files
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ inputs.working-directory }}/zenvestor_server/lib/src/generated
+          ${{ inputs.working-directory }}/zenvestor_client/lib/src/generated
+        key: ${{ runner.os }}-serverpod-${{ hashFiles('**/protocol.yaml') }}-${{ hashFiles('**/*.spy.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-serverpod-
+
+    # Install dependencies
+    - name: Install server dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/zenvestor_server
+      run: dart pub get
+
+    - name: Install Flutter dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/zenvestor_flutter
+      run: flutter pub get
+
+    # Activate global packages
+    - name: Activate Dart global packages
+      shell: bash
+      run: |
+        dart pub global activate serverpod_cli
+        dart pub global activate coverage
+        echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+    # Generate Serverpod code if needed
+    - name: Generate Serverpod code
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}/zenvestor_server
+      run: |
+        # Check if generated files exist and are up to date
+        if [ ! -d "lib/src/generated" ] || [ ! -f "lib/src/generated/protocol.dart" ]; then
+          echo "Generating Serverpod code..."
+          serverpod generate
+        else
+          echo "Using cached Serverpod generated files"
+        fi
+
+    # Install coverage tools if requested
+    - name: Install coverage tools
+      if: inputs.install-coverage-tools == 'true'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc lcov
+
+    # Make scripts executable
+    - name: Make scripts executable
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if [ -d "scripts" ]; then
+          chmod +x scripts/*.sh 2>/dev/null || true
+        fi
