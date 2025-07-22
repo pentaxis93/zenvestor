@@ -12,6 +12,7 @@ If it fails due to pre-commit pipeline checks, **your mission begins**: resolve 
 - Lint, tests, and coverage thresholds are satisfied.
 - Your commit is successfully recorded.
 - It appears cleanly in the `git log`.
+- There is no "Claude footer" nor other authorship attribution.
 
 ---
 
