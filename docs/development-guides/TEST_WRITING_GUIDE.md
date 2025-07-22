@@ -721,6 +721,77 @@ Tests should run in this order in CI:
 4. Golden tests
 5. Integration tests
 
+## Code Coverage
+
+### Coverage Requirements
+
+The Zenvestor project enforces **100% code coverage** for both `zenvestor_server` and `zenvestor_flutter`. This requirement is automatically enforced by our git hooks and CI/CD pipeline.
+
+### Why dlcov?
+
+Standard Dart/Flutter coverage tools only report coverage for files that are loaded during test execution. This means completely untested files are invisible to coverage reports, giving a false sense of security. We use **dlcov** to ensure ALL source files are included in coverage calculations.
+
+### Running Coverage Locally
+
+```bash
+# Run coverage for both projects
+./scripts/test-coverage.sh
+
+# Run coverage for server only
+cd zenvestor_server
+dlcov gen-refs  # Generate references to all source files
+flutter test --coverage
+dlcov -c 100 --include-untested-files=true --exclude-suffix=".g.dart,.freezed.dart"
+
+# Run coverage for Flutter only
+cd zenvestor_flutter
+dlcov gen-refs
+flutter test --coverage
+dlcov -c 100 --include-untested-files=true --exclude-suffix=".g.dart,.freezed.dart" --exclude-files="lib/main.dart"
+```
+
+### Understanding Coverage Reports
+
+When you run coverage, you'll see output like:
+```
+Server:  35.4%
+Flutter: 100.0%
+```
+
+This means:
+- Server has only 35.4% of its code covered by tests
+- Flutter has 100% of its code covered
+
+The pre-commit hook will fail if either project is below 100%.
+
+### Finding Untested Code
+
+Use the find-untested-code script to identify specific files and lines that need tests:
+```bash
+./scripts/find-untested-code.sh
+```
+
+### Coverage Exclusions
+
+The following files are automatically excluded from coverage:
+- All generated files:
+  - Files with suffixes: `*.g.dart`, `*.freezed.dart`
+  - Entire directory: `lib/src/generated/*`
+- `main.dart` in Flutter (application entry point)
+- Serverpod demo files (will be removed during development):
+  - `lib/src/greeting_endpoint.dart`
+  - `lib/src/birthday_reminder.dart`
+  - `lib/src/web/routes/root.dart`
+  - `lib/src/web/widgets/built_with_serverpod_page.dart`
+  - `lib/server.dart`
+
+### Important Notes on Coverage
+
+1. **Coverage is a minimum bar, not a goal** - 100% coverage doesn't mean perfect tests
+2. **Focus on behavior** - Test what the code does, not just that it runs
+3. **Edge cases matter** - High coverage should include error paths and edge cases
+4. **Integration matters** - Unit tests alone aren't sufficient; integration tests are crucial
+
 ## Best Practices Summary
 
 1. **Write meaningful tests** - Never write trivial tests to game coverage metrics
@@ -734,5 +805,6 @@ Tests should run in this order in CI:
 9. **Maintain test quality** - Tests need the same care as production code
 10. **Run tests frequently** - Before every commit
 11. **Update goldens carefully** - Review visual changes before approving
+12. **Maintain 100% coverage** - Use dlcov to ensure all files are tested
 
 Remember: Tests are documentation of intended behavior. Write them clearly and maintain them well. Coverage requirements exist to encourage quality, not to be gamed.
