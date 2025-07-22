@@ -142,13 +142,22 @@ parallel-checks:
     semgrep-scan:
       run: |
         echo "🔍 Running Semgrep SAST scan..." && \
+        # Capture originally staged files before semgrep runs
+        staged_files=$(git diff --staged --name-only) && \
         semgrep \
           --config=p/security-audit \
           --config=p/secrets \
           --config=p/owasp-top-ten \
           --autofix \
           --error && \
-        git add -A && \
+        # Re-stage only the originally staged files that semgrep may have modified
+        if [ -n "$staged_files" ]; then
+          echo "$staged_files" | while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              git add "$file"
+            fi
+          done
+        fi && \
         echo "✅ Semgrep scan complete - security issues fixed"
 
 # Pre-push hook to run tests with coverage before pushing
