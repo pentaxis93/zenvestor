@@ -19,6 +19,12 @@ class TickerSymbol extends Equatable {
   /// through the factory method with proper validation.
   const TickerSymbol._(this.value);
 
+  /// Maximum allowed length for a ticker symbol.
+  static const int maxLength = 5;
+
+  /// Regular expression pattern for valid ticker symbols (A-Z only).
+  static final RegExp _validPattern = RegExp(r'^[A-Z]+$');
+
   /// Creates a TickerSymbol from a string value.
   ///
   /// The input is normalized by:
@@ -45,8 +51,7 @@ class TickerSymbol extends Equatable {
     final normalized = trimmed.toUpperCase();
 
     // Check for valid characters (only A-Z) before checking length
-    final validPattern = RegExp(r'^[A-Z]+$');
-    if (!validPattern.hasMatch(normalized)) {
+    if (!_validPattern.hasMatch(normalized)) {
       return Left(
         ValidationError(
           field: 'ticker_symbol',
@@ -57,7 +62,7 @@ class TickerSymbol extends Equatable {
     }
 
     // Check length after validating characters
-    if (normalized.length > 5) {
+    if (normalized.length > maxLength) {
       return Left(
         ValidationError.invalidLength(
           field: 'ticker_symbol',
