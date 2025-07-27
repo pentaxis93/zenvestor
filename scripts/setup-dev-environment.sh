@@ -143,17 +143,41 @@ else
     print_error "Failed to install Trivy"
 fi
 
-# Install Semgrep
+# Install Semgrep via pipx
 echo "Installing Semgrep..."
-if command -v pip3 &> /dev/null; then
-    pip3 install semgrep
-    print_status "Semgrep installed via pip3"
-elif command -v pip &> /dev/null; then
-    pip install semgrep
-    print_status "Semgrep installed via pip"
+
+# Check if pipx is installed
+if ! command -v pipx &> /dev/null; then
+    print_warning "pipx not found. Installing pipx..."
+    
+    # Try to install pipx via package manager first
+    if [ "$OS" = "Linux" ] && command -v apt-get &> /dev/null; then
+        sudo apt-get update
+        sudo apt-get install -y pipx
+    elif command -v pip3 &> /dev/null; then
+        pip3 install --user pipx
+    elif command -v pip &> /dev/null; then
+        pip install --user pipx
+    else
+        print_error "Neither pip nor pip3 found. Please install Python pip to install pipx"
+        print_warning "You can install pip with: sudo apt-get install python3-pip"
+    fi
+    
+    # Ensure pipx is in PATH
+    if command -v pipx &> /dev/null; then
+        pipx ensurepath
+        print_status "pipx installed and PATH configured"
+        # Source the current shell to get pipx in PATH immediately
+        export PATH="$PATH:$HOME/.local/bin"
+    fi
+fi
+
+# Install semgrep via pipx if pipx is available
+if command -v pipx &> /dev/null; then
+    pipx install semgrep
+    print_status "Semgrep installed via pipx"
 else
-    print_error "pip/pip3 not found. Please install Python pip to install Semgrep"
-    print_warning "You can install pip with: sudo apt-get install python3-pip"
+    print_error "pipx installation failed or not in PATH"
 fi
 
 # Verify Semgrep installation
@@ -161,7 +185,7 @@ if command -v semgrep &> /dev/null; then
     print_status "Semgrep installed: $(semgrep --version)"
 else
     print_error "Failed to install Semgrep"
-    print_warning "Make sure Python pip is installed and ~/.local/bin is in your PATH"
+    print_warning "Make sure pipx is installed and ~/.local/bin is in your PATH"
 fi
 
 echo ""
