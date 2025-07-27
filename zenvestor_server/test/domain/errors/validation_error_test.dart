@@ -161,7 +161,10 @@ void main() {
       });
 
       test('invalidStockSymbol creates error for invalid ticker symbols', () {
-        final error = ValidationError.invalidStockSymbol('abc123');
+        final error = ValidationError.invalidStockSymbol(
+          field: 'symbol',
+          invalidValue: 'abc123',
+        );
 
         expect(error.field, equals('symbol'));
         expect(error.invalidValue, equals('abc123'));

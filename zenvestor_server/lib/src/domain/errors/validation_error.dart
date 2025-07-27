@@ -14,6 +14,13 @@ class ValidationError extends DomainError {
   });
 
   /// Creates a validation error for a required field that is missing.
+  ///
+  /// Example:
+  /// ```dart
+  /// final error = ValidationError.missingRequired('email');
+  /// // Results in: ValidationError(field: 'email', invalidValue: null,
+  /// //             message: 'email is required')
+  /// ```
   factory ValidationError.missingRequired(String field) {
     return ValidationError(
       field: field,
@@ -23,6 +30,18 @@ class ValidationError extends DomainError {
   }
 
   /// Creates a validation error for a field with invalid format.
+  ///
+  /// Example:
+  /// ```dart
+  /// final error = ValidationError.invalidFormat(
+  ///   field: 'email',
+  ///   invalidValue: 'not-an-email',
+  ///   expectedFormat: 'valid email address',
+  /// );
+  /// // Results in: ValidationError(field: 'email',
+  /// //             invalidValue: 'not-an-email',
+  /// //             message: 'email must be a valid email address')
+  /// ```
   factory ValidationError.invalidFormat({
     required String field,
     required Object? invalidValue,
@@ -36,6 +55,18 @@ class ValidationError extends DomainError {
   }
 
   /// Creates a validation error for a field with invalid length.
+  ///
+  /// Example:
+  /// ```dart
+  /// final error = ValidationError.invalidLength(
+  ///   field: 'username',
+  ///   invalidValue: 'ab',
+  ///   minLength: 3,
+  ///   maxLength: 20,
+  /// );
+  /// // Results in: ValidationError(field: 'username', invalidValue: 'ab',
+  /// //             message: 'username must be between 3 and 20 characters')
+  /// ```
   factory ValidationError.invalidLength({
     required String field,
     required Object? invalidValue,
@@ -63,6 +94,18 @@ class ValidationError extends DomainError {
   }
 
   /// Creates a validation error for a numeric field that is out of range.
+  ///
+  /// Example:
+  /// ```dart
+  /// final error = ValidationError.outOfRange(
+  ///   field: 'age',
+  ///   invalidValue: 150,
+  ///   min: 0,
+  ///   max: 120,
+  /// );
+  /// // Results in: ValidationError(field: 'age', invalidValue: 150,
+  /// //             message: 'age must be between 0 and 120')
+  /// ```
   factory ValidationError.outOfRange({
     required String field,
     required num invalidValue,
@@ -89,9 +132,12 @@ class ValidationError extends DomainError {
 
   /// Creates a validation error for an invalid stock symbol.
   /// Stock symbols must be 1-5 uppercase letters.
-  factory ValidationError.invalidStockSymbol(String invalidValue) {
+  factory ValidationError.invalidStockSymbol({
+    required String field,
+    required String invalidValue,
+  }) {
     return ValidationError(
-      field: 'symbol',
+      field: field,
       invalidValue: invalidValue,
       message: 'Stock symbol must be 1-5 uppercase letters',
     );
@@ -157,43 +203,46 @@ class ValidationError extends DomainError {
 /// complex domain objects that may have multiple validation failures.
 class ValidationErrors extends Equatable {
   /// Creates a collection of validation errors.
-  const ValidationErrors(this.errors);
+  const ValidationErrors(this._errors);
+
+  /// The list of validation errors (read-only).
+  final List<ValidationError> _errors;
 
   /// The list of validation errors.
-  final List<ValidationError> errors;
+  List<ValidationError> get errors => List.unmodifiable(_errors);
 
   /// Returns true if there are any validation errors.
-  bool get hasErrors => errors.isNotEmpty;
+  bool get hasErrors => _errors.isNotEmpty;
 
   /// Returns true if there are no validation errors.
-  bool get isEmpty => errors.isEmpty;
+  bool get isEmpty => _errors.isEmpty;
 
   /// Creates a new ValidationErrors instance with an additional error.
   ValidationErrors add(ValidationError error) {
-    return ValidationErrors([...errors, error]);
+    return ValidationErrors([..._errors, error]);
   }
 
   /// Creates a new ValidationErrors instance with additional errors.
   ValidationErrors addAll(List<ValidationError> newErrors) {
-    return ValidationErrors([...errors, ...newErrors]);
+    return ValidationErrors([..._errors, ...newErrors]);
   }
 
   /// Returns all errors for a specific field.
   List<ValidationError> getErrorsForField(String field) {
-    return errors.where((error) => error.field == field).toList();
+    return _errors.where((error) => error.field == field).toList();
   }
 
   @override
-  List<Object?> get props => [errors];
+  List<Object?> get props => [_errors];
 
   @override
   String toString() {
-    final buffer = StringBuffer('ValidationErrors(${errors.length} errors)');
-    if (errors.isNotEmpty) {
+    final buffer = StringBuffer('ValidationErrors(${_errors.length} errors)');
+    if (_errors.isNotEmpty) {
       buffer.write(': [');
-      for (var i = 0; i < errors.length; i++) {
+      for (var i = 0; i < _errors.length; i++) {
         if (i > 0) buffer.write(', ');
-        buffer.write(errors[i].toString());
+        buffer.write(_errors[i].toString());
       }
       buffer.write(']');
     }
