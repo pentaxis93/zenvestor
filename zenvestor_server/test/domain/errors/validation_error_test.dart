@@ -1,6 +1,6 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:test/test.dart';
-import 'package:zenvestor_server/src/domain/errors/validation_error.dart';
+import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
 
 void main() {
   group('ValidationError', () {
@@ -34,8 +34,8 @@ void main() {
     });
 
     group('factory constructors', () {
-      test('required creates error for missing field', () {
-        final error = ValidationError.required('portfolioName');
+      test('missingRequired creates error for missing field', () {
+        final error = ValidationError.missingRequired('portfolioName');
 
         expect(error.field, equals('portfolioName'));
         expect(error.invalidValue, isNull);

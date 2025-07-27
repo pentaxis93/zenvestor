@@ -1,11 +1,11 @@
-import 'package:equatable/equatable.dart';
+part of 'domain_error.dart';
 
 /// Represents a validation error for a specific field in the domain layer.
 ///
 /// This class is used throughout the domain layer to represent validation
 /// failures in a consistent and type-safe manner. It works well with
 /// functional error handling patterns using Either types.
-class ValidationError extends Equatable {
+class ValidationError extends DomainError {
   /// Creates a validation error with the specified field, value, and message.
   const ValidationError({
     required this.field,
@@ -14,7 +14,7 @@ class ValidationError extends Equatable {
   });
 
   /// Creates a validation error for a required field that is missing.
-  factory ValidationError.required(String field) {
+  factory ValidationError.missingRequired(String field) {
     return ValidationError(
       field: field,
       invalidValue: null,

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';
-import 'package:zenvestor_server/src/domain/errors/validation_error.dart';
+import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
 
 /// Represents a valid stock ticker symbol.
 ///
