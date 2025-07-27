@@ -40,9 +40,9 @@ class TickerSymbol extends Equatable {
     if (trimmed.isEmpty) {
       return Left(
         ValidationError(
-          field: 'ticker_symbol',
+          field: 'tickerSymbol',
           invalidValue: input,
-          message: 'ticker_symbol is required',
+          message: 'tickerSymbol is required',
         ),
       );
     }
@@ -53,10 +53,9 @@ class TickerSymbol extends Equatable {
     // Check for valid characters (only A-Z) before checking length
     if (!_validPattern.hasMatch(normalized)) {
       return Left(
-        ValidationError(
-          field: 'ticker_symbol',
+        ValidationError.invalidStockSymbol(
+          field: 'tickerSymbol',
           invalidValue: input,
-          message: 'ticker_symbol must contain only letters A-Z',
         ),
       );
     }
@@ -65,7 +64,7 @@ class TickerSymbol extends Equatable {
     if (normalized.length > maxLength) {
       return Left(
         ValidationError.invalidLength(
-          field: 'ticker_symbol',
+          field: 'tickerSymbol',
           invalidValue: input,
           maxLength: 5,
         ),

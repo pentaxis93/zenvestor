@@ -93,9 +93,9 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (error) {
-              expect(error.field, 'ticker_symbol');
+              expect(error.field, 'tickerSymbol');
               expect(error.invalidValue, '');
-              expect(error.message, 'ticker_symbol is required');
+              expect(error.message, 'tickerSymbol is required');
             },
             (success) => fail('Should have failed'),
           );
@@ -107,9 +107,9 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (error) {
-              expect(error.field, 'ticker_symbol');
+              expect(error.field, 'tickerSymbol');
               expect(error.invalidValue, '   ');
-              expect(error.message, 'ticker_symbol is required');
+              expect(error.message, 'tickerSymbol is required');
             },
             (success) => fail('Should have failed'),
           );
@@ -121,11 +121,11 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (error) {
-              expect(error.field, 'ticker_symbol');
+              expect(error.field, 'tickerSymbol');
               expect(error.invalidValue, 'ABCDEF');
               expect(
                 error.message,
-                'ticker_symbol must be at most 5 characters',
+                'tickerSymbol must be at most 5 characters',
               );
             },
             (success) => fail('Should have failed'),
@@ -138,11 +138,11 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (error) {
-              expect(error.field, 'ticker_symbol');
+              expect(error.field, 'tickerSymbol');
               expect(error.invalidValue, 'ABC123');
               expect(
                 error.message,
-                'ticker_symbol must contain only letters A-Z',
+                'Stock symbol must be 1-5 uppercase letters',
               );
             },
             (success) => fail('Should have failed'),
@@ -155,11 +155,11 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (error) {
-              expect(error.field, 'ticker_symbol');
+              expect(error.field, 'tickerSymbol');
               expect(error.invalidValue, 'ABC.D');
               expect(
                 error.message,
-                'ticker_symbol must contain only letters A-Z',
+                'Stock symbol must be 1-5 uppercase letters',
               );
             },
             (success) => fail('Should have failed'),
@@ -172,11 +172,11 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (error) {
-              expect(error.field, 'ticker_symbol');
+              expect(error.field, 'tickerSymbol');
               expect(error.invalidValue, 'AB CD');
               expect(
                 error.message,
-                'ticker_symbol must contain only letters A-Z',
+                'Stock symbol must be 1-5 uppercase letters',
               );
             },
             (success) => fail('Should have failed'),
@@ -189,11 +189,11 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (error) {
-              expect(error.field, 'ticker_symbol');
+              expect(error.field, 'tickerSymbol');
               expect(error.invalidValue, 'ABC-D');
               expect(
                 error.message,
-                'ticker_symbol must contain only letters A-Z',
+                'Stock symbol must be 1-5 uppercase letters',
               );
             },
             (success) => fail('Should have failed'),
@@ -206,11 +206,11 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (error) {
-              expect(error.field, 'ticker_symbol');
+              expect(error.field, 'tickerSymbol');
               expect(error.invalidValue, 'ABC_D');
               expect(
                 error.message,
-                'ticker_symbol must contain only letters A-Z',
+                'Stock symbol must be 1-5 uppercase letters',
               );
             },
             (success) => fail('Should have failed'),
