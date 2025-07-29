@@ -6,6 +6,7 @@ part 'shared/format_validation_error.dart';
 part 'shared/required_field_error.dart';
 part 'ticker_symbol_errors.dart';
 part 'company_name_errors.dart';
+part 'sic_code_errors.dart';
 part 'test_doubles.dart';
 
 /// Base class for all domain layer errors in the Zenvestor application.
