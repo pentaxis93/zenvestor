@@ -1,6 +1,8 @@
 import 'package:test/test.dart';
 import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
 
+import '../../fixtures/company_name_fixtures.dart';
+
 void main() {
   group('CompanyNameError hierarchy', () {
     test('all errors extend CompanyNameError', () {
@@ -160,15 +162,8 @@ void main() {
     });
 
     test('handles various invalid characters', () {
-      const testCases = [
-        'Company@Test', // @ symbol
-        'Company#1', // # symbol
-        r'Company$Corp', // \$ symbol
-        'Company!', // ! mark
-        'Company%Ltd', // % symbol
-        'Company[A]', // Square brackets
-        'Company{B}', // Curly braces
-      ];
+      // Use a representative sample from the fixtures
+      final testCases = CompanyNameFixtures.invalidCharacterNames.take(7);
 
       for (final invalidValue in testCases) {
         final error = CompanyNameInvalidCharacters(invalidValue);
@@ -214,17 +209,8 @@ void main() {
     });
 
     test('handles various non-alphanumeric strings', () {
-      const testCases = [
-        '...', // Only periods
-        '---', // Only hyphens
-        '   ', // Only spaces
-        '&&&', // Only ampersands
-        '(())', // Only parentheses
-        "'''", // Only apostrophes
-        '.,.-&', // Mix of punctuation
-      ];
-
-      for (final invalidValue in testCases) {
+      // Use all non-alphanumeric examples from fixtures
+      for (final invalidValue in CompanyNameFixtures.noAlphanumericNames) {
         final error = CompanyNameNoAlphanumeric(invalidValue);
         expect(error.actualValue, invalidValue);
       }
@@ -321,8 +307,9 @@ void main() {
       // Empty name
       expect(const CompanyNameEmpty().message, contains('cannot be empty'));
 
-      // Too long name (simulating a very long company name)
-      expect(const CompanyNameTooLong(300).message,
+      // Too long name (using fixture to get actual length)
+      final tooLongName = CompanyNameFixtures.generateTooLongName();
+      expect(CompanyNameTooLong(tooLongName.length).message,
           contains('at most 255 characters'));
 
       // Invalid characters

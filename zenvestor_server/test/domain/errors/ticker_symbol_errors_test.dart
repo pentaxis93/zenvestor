@@ -156,13 +156,14 @@ void main() {
     });
 
     test('handles various invalid formats', () {
-      const testCases = [
-        'abc123', // Contains numbers
-        'AAPL!', // Contains special character
-        'aa bb', // Contains space
-        'aapl', // Lowercase
-        'AAPL-B', // Contains hyphen
-        'AAPL.X', // Contains period
+      // Use a representative sample from the fixtures
+      final testCases = [
+        'ABC123', // From fixtures - contains numbers
+        'ABC!', // Special character
+        'AB CD', // Space
+        'AAPL-B', // Hyphen
+        'ABC.D', // Period
+        'abc', // Lowercase
       ];
 
       for (final invalidValue in testCases) {

@@ -1,6 +1,8 @@
 import 'package:test/test.dart';
 import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
 
+import '../../fixtures/sic_code_fixtures.dart';
+
 void main() {
   group('SicCodeError', () {
     group('SicCodeEmpty', () {
@@ -65,24 +67,32 @@ void main() {
 
     group('SicCodeInvalidFormat', () {
       test('should create error with actual value', () {
-        const error = SicCodeInvalidFormat('73A2');
+        // Use first non-numeric code from fixtures
+        final invalidCode = SicCodeFixtures.nonNumericCodes.first;
+        final error = SicCodeInvalidFormat(invalidCode);
 
-        expect(error.actualValue, '73A2');
+        expect(error.actualValue, invalidCode);
         expect(error.expectedFormat, '4 numeric digits');
         expect(error.fieldContext, 'SIC code');
         expect(error.message, 'SIC code must contain only numeric digits');
       });
 
       test('should have correct toString representation', () {
-        const error = SicCodeInvalidFormat('ABCD');
+        // Use a fixture value
+        final invalidCode = SicCodeFixtures.nonNumericCodes[0]; // 'ABCD'
+        final error = SicCodeInvalidFormat(invalidCode);
 
-        expect(error.toString(), 'SicCodeInvalidFormat(actualValue: ABCD)');
+        expect(error.toString(),
+            'SicCodeInvalidFormat(actualValue: $invalidCode)');
       });
 
       test('should support equality', () {
+        // Use fixture values
+        final code2 = SicCodeFixtures.nonNumericCodes[2]; // 'A372'
+
         const error1 = SicCodeInvalidFormat('73A2');
         const error2 = SicCodeInvalidFormat('73A2');
-        const error3 = SicCodeInvalidFormat('AB12');
+        final error3 = SicCodeInvalidFormat(code2);
 
         expect(error1, equals(error2));
         expect(error1, isNot(equals(error3)));
@@ -91,22 +101,31 @@ void main() {
 
     group('SicCodeOutOfRange', () {
       test('should create error with actual value', () {
-        const error = SicCodeOutOfRange('0000');
+        // Use first out-of-range code from fixtures
+        final outOfRangeCode = SicCodeFixtures.outOfRangeCodes.first;
+        final error = SicCodeOutOfRange(outOfRangeCode);
 
-        expect(error.actualValue, '0000');
+        expect(error.actualValue, outOfRangeCode);
         expect(error.message, 'SIC code must be between 0100 and 9999');
       });
 
       test('should have correct toString representation', () {
-        const error = SicCodeOutOfRange('0099');
+        // Use a specific out-of-range value from fixtures
+        final outOfRangeCode = SicCodeFixtures.outOfRangeCodes[3]; // '0099'
+        final error = SicCodeOutOfRange(outOfRangeCode);
 
-        expect(error.toString(), 'SicCodeOutOfRange(actualValue: 0099)');
+        expect(error.toString(),
+            'SicCodeOutOfRange(actualValue: $outOfRangeCode)');
       });
 
       test('should support equality', () {
-        const error1 = SicCodeOutOfRange('0000');
-        const error2 = SicCodeOutOfRange('0000');
-        const error3 = SicCodeOutOfRange('0099');
+        // Use fixture values
+        final code1 = SicCodeFixtures.outOfRangeCodes[0]; // '0000'
+        final code2 = SicCodeFixtures.outOfRangeCodes[3]; // '0099'
+
+        final error1 = SicCodeOutOfRange(code1);
+        final error2 = SicCodeOutOfRange(code1);
+        final error3 = SicCodeOutOfRange(code2);
 
         expect(error1, equals(error2));
         expect(error1, isNot(equals(error3)));
@@ -115,11 +134,11 @@ void main() {
 
     group('polymorphism', () {
       test('all errors should be SicCodeError', () {
-        const errors = [
-          SicCodeEmpty(),
-          SicCodeInvalidLength(3),
-          SicCodeInvalidFormat('ABCD'),
-          SicCodeOutOfRange('0000'),
+        final errors = [
+          const SicCodeEmpty(),
+          const SicCodeInvalidLength(3),
+          SicCodeInvalidFormat(SicCodeFixtures.nonNumericCodes.first),
+          SicCodeOutOfRange(SicCodeFixtures.outOfRangeCodes.first),
         ];
 
         for (final error in errors) {
@@ -131,7 +150,8 @@ void main() {
       test('errors should implement correct interfaces', () {
         const emptyError = SicCodeEmpty();
         const lengthError = SicCodeInvalidLength(3);
-        const formatError = SicCodeInvalidFormat('ABCD');
+        final formatError =
+            SicCodeInvalidFormat(SicCodeFixtures.nonNumericCodes.first);
 
         expect(emptyError, isA<RequiredFieldError>());
         expect(lengthError, isA<LengthValidationError>());
