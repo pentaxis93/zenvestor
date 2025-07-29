@@ -61,19 +61,27 @@ When creating domain error classes, you will:
    
    The standard pattern combines type safety with code reuse through:
    
-   a. **Shared Validation Interfaces** for common patterns:
+   a. **Shared Validation Interfaces** for common patterns (kept minimal per YAGNI):
    ```dart
+   // Length validation interface - no computed properties
    abstract interface class LengthValidationError implements DomainError {
      int? get maxLength;
      int? get minLength;
      int get actualLength;
      String get fieldContext;
-     
-     // Computed properties with default implementations
-     int get excessLength => /* implementation */;
-     int get deficitLength => /* implementation */;
-     bool get isTooLong => excessLength > 0;
-     bool get isTooShort => deficitLength > 0;
+   }
+   
+   // Format validation interface
+   abstract interface class FormatValidationError implements DomainError {
+     String get expectedFormat;
+     String get actualValue;
+     String get fieldContext;
+   }
+   
+   // Required field interface
+   abstract interface class RequiredFieldError implements DomainError {
+     String get fieldContext;
+     Object? get providedValue;
    }
    ```
    
@@ -90,6 +98,7 @@ When creating domain error classes, you will:
        implements LengthValidationError {
      const TickerSymbolTooLong(this.actualLength);
      
+     @override
      final int actualLength;
      
      @override
@@ -102,18 +111,20 @@ When creating domain error classes, you will:
      String get fieldContext => 'ticker symbol';
      
      @override
-     String get message => 'Ticker symbol must be at most 5 characters (was $actualLength)';
+     String get message => 
+         'Ticker symbol must be at most 5 characters (was $actualLength)';
      
-     // Must implement computed properties from interface
      @override
-     int get excessLength => /* implementation */;
-     // ... other interface methods
+     List<Object?> get props => [actualLength];
+     
+     @override
+     String toString() => 'TickerSymbolTooLong(actualLength: $actualLength)';
    }
    ```
    
    c. **Value Object Integration**:
    ```dart
-   class TickerSymbol {
+   class TickerSymbol extends Equatable {
      final String value;
      
      const TickerSymbol._(this.value);
@@ -128,7 +139,7 @@ When creating domain error classes, you will:
        final normalized = trimmed.toUpperCase();
        
        if (!_validPattern.hasMatch(normalized)) {
-         return Left(TickerSymbolInvalidFormat(input));
+         return Left(TickerSymbolInvalidFormat(normalized));
        }
        
        if (normalized.length > maxLength) {
@@ -137,6 +148,9 @@ When creating domain error classes, you will:
        
        return Right(TickerSymbol._(normalized));
      }
+     
+     @override
+     List<Object?> get props => [value];
    }
    ```
 
@@ -172,6 +186,11 @@ Key principles you enforce:
 - **Domain Expressiveness**: Error names communicate business concepts
 - **No Generic Errors**: Avoid ValidationError in favor of specific types
 - **Composability**: Errors should support aggregation and transformation
+- **YAGNI (You Aren't Gonna Need It)**: Only implement what's currently needed:
+  - No default implementations in interfaces
+  - No computed properties unless actively used
+  - No speculative features or "nice to have" methods
+  - Keep interfaces minimal and focused
 
 When reviewing existing error handling, you will identify:
 - Missing test coverage for error scenarios
