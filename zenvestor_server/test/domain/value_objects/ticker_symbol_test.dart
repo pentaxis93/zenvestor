@@ -1,5 +1,7 @@
 import 'package:test/test.dart';
+import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
 import 'package:zenvestor_server/src/domain/value_objects/ticker_symbol.dart';
+
 import '../../fixtures/ticker_symbol_fixtures.dart';
 
 void main() {
@@ -70,7 +72,7 @@ void main() {
         });
       });
 
-      group('should return ValidationError', () {
+      group('should return TickerSymbolError', () {
         test('for empty or whitespace only strings', () {
           for (final invalidTicker
               in TickerSymbolFixtures.emptyOrWhitespaceTickers) {
@@ -79,9 +81,10 @@ void main() {
             expect(result.isLeft(), isTrue);
             result.fold(
               (error) {
-                expect(error.field, 'tickerSymbol');
-                expect(error.invalidValue, invalidTicker);
-                expect(error.message, 'tickerSymbol is required');
+                expect(error, isA<TickerSymbolEmpty>());
+                final emptyError = error as TickerSymbolEmpty;
+                expect(emptyError.providedValue, invalidTicker);
+                expect(emptyError.message, 'Ticker symbol is required');
               },
               (success) => fail('Should have failed'),
             );
@@ -96,11 +99,12 @@ void main() {
             expect(result.isLeft(), isTrue);
             result.fold(
               (error) {
-                expect(error.field, 'tickerSymbol');
-                expect(error.invalidValue, invalidTicker);
+                expect(error, isA<TickerSymbolTooLong>());
+                final lengthError = error as TickerSymbolTooLong;
+                expect(lengthError.actualLength, greaterThan(5));
                 expect(
-                  error.message,
-                  'tickerSymbol must be at most 5 characters',
+                  lengthError.message,
+                  contains('must be at most 5 characters'),
                 );
               },
               (success) => fail('Should have failed'),
@@ -126,11 +130,12 @@ void main() {
             expect(result.isLeft(), isTrue);
             result.fold(
               (error) {
-                expect(error.field, 'tickerSymbol');
-                expect(error.invalidValue, invalidTicker);
+                expect(error, isA<TickerSymbolInvalidFormat>());
+                final formatError = error as TickerSymbolInvalidFormat;
+                expect(formatError.actualValue, invalidTicker);
                 expect(
-                  error.message,
-                  'Stock symbol must be 1-5 uppercase letters',
+                  formatError.message,
+                  'Ticker symbol must contain only uppercase letters A-Z',
                 );
               },
               (success) => fail('Should have failed for $invalidTicker'),

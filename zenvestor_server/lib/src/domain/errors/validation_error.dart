@@ -5,180 +5,26 @@ part of 'domain_error.dart';
 /// This class is used throughout the domain layer to represent validation
 /// failures in a consistent and type-safe manner. It works well with
 /// functional error handling patterns using Either types.
+///
+/// @deprecated Use specific error hierarchies for each value object instead.
+/// For example, use TickerSymbolError for ticker validation, CompanyNameError
+/// for company name validation, etc. This provides better type safety and
+/// more expressive domain modeling.
+@Deprecated(
+  'Use specific error hierarchies for each value object. '
+  'See TickerSymbolError and CompanyNameError for examples.',
+)
 class ValidationError extends DomainError {
   /// Creates a validation error with the specified field, value, and message.
+  @Deprecated(
+    'Use specific error hierarchies for each value object. '
+    'See TickerSymbolError and CompanyNameError for examples.',
+  )
   const ValidationError({
     required this.field,
     required this.invalidValue,
     required this.message,
   });
-
-  /// Creates a validation error for a required field that is missing.
-  ///
-  /// Example:
-  /// ```dart
-  /// final error = ValidationError.missingRequired('email');
-  /// // Results in: ValidationError(field: 'email', invalidValue: null,
-  /// //             message: 'email is required')
-  /// ```
-  factory ValidationError.missingRequired(String field) {
-    return ValidationError(
-      field: field,
-      invalidValue: null,
-      message: '$field is required',
-    );
-  }
-
-  /// Creates a validation error for a field with invalid format.
-  ///
-  /// Example:
-  /// ```dart
-  /// final error = ValidationError.invalidFormat(
-  ///   field: 'email',
-  ///   invalidValue: 'not-an-email',
-  ///   expectedFormat: 'valid email address',
-  /// );
-  /// // Results in: ValidationError(field: 'email',
-  /// //             invalidValue: 'not-an-email',
-  /// //             message: 'email must be a valid email address')
-  /// ```
-  factory ValidationError.invalidFormat({
-    required String field,
-    required Object? invalidValue,
-    required String expectedFormat,
-  }) {
-    return ValidationError(
-      field: field,
-      invalidValue: invalidValue,
-      message: '$field must be a $expectedFormat',
-    );
-  }
-
-  /// Creates a validation error for a field with invalid length.
-  ///
-  /// Example:
-  /// ```dart
-  /// final error = ValidationError.invalidLength(
-  ///   field: 'username',
-  ///   invalidValue: 'ab',
-  ///   minLength: 3,
-  ///   maxLength: 20,
-  /// );
-  /// // Results in: ValidationError(field: 'username', invalidValue: 'ab',
-  /// //             message: 'username must be between 3 and 20 characters')
-  /// ```
-  factory ValidationError.invalidLength({
-    required String field,
-    required Object? invalidValue,
-    int? minLength,
-    int? maxLength,
-  }) {
-    String message;
-    if (minLength != null && maxLength != null) {
-      message = '$field must be between $minLength and $maxLength characters';
-    } else if (minLength != null) {
-      message = '$field must be at least $minLength characters';
-    } else if (maxLength != null) {
-      message = '$field must be at most $maxLength characters';
-    } else {
-      throw ArgumentError(
-        'At least one of minLength or maxLength must be provided',
-      );
-    }
-
-    return ValidationError(
-      field: field,
-      invalidValue: invalidValue,
-      message: message,
-    );
-  }
-
-  /// Creates a validation error for a numeric field that is out of range.
-  ///
-  /// Example:
-  /// ```dart
-  /// final error = ValidationError.outOfRange(
-  ///   field: 'age',
-  ///   invalidValue: 150,
-  ///   min: 0,
-  ///   max: 120,
-  /// );
-  /// // Results in: ValidationError(field: 'age', invalidValue: 150,
-  /// //             message: 'age must be between 0 and 120')
-  /// ```
-  factory ValidationError.outOfRange({
-    required String field,
-    required num invalidValue,
-    num? min,
-    num? max,
-  }) {
-    String message;
-    if (min != null && max != null) {
-      message = '$field must be between $min and $max';
-    } else if (min != null) {
-      message = '$field must be at least $min';
-    } else if (max != null) {
-      message = '$field must be at most $max';
-    } else {
-      throw ArgumentError('At least one of min or max must be provided');
-    }
-
-    return ValidationError(
-      field: field,
-      invalidValue: invalidValue,
-      message: message,
-    );
-  }
-
-  /// Creates a validation error for an invalid stock symbol.
-  /// Stock symbols must be 1-5 uppercase letters.
-  factory ValidationError.invalidStockSymbol({
-    required String field,
-    required String invalidValue,
-  }) {
-    return ValidationError(
-      field: field,
-      invalidValue: invalidValue,
-      message: 'Stock symbol must be 1-5 uppercase letters',
-    );
-  }
-
-  /// Creates a validation error for a percentage value outside 0-100 range.
-  factory ValidationError.invalidPercentage({
-    required String field,
-    required num invalidValue,
-  }) {
-    return ValidationError(
-      field: field,
-      invalidValue: invalidValue,
-      message: '$field must be between 0 and 100',
-    );
-  }
-
-  /// Creates a validation error for a negative or zero price.
-  factory ValidationError.invalidPrice({
-    required String field,
-    required num invalidValue,
-  }) {
-    return ValidationError(
-      field: field,
-      invalidValue: invalidValue,
-      message: '$field must be a positive number',
-    );
-  }
-
-  /// Creates a validation error for an invalid quantity
-  /// (must be positive integer).
-  factory ValidationError.invalidQuantity({
-    required String field,
-    required num invalidValue,
-  }) {
-    return ValidationError(
-      field: field,
-      invalidValue: invalidValue,
-      message: '$field must be a positive integer',
-    );
-  }
 
   /// The field that failed validation.
   final String field;
@@ -201,8 +47,21 @@ class ValidationError extends DomainError {
 
 /// A collection of validation errors, typically used when validating
 /// complex domain objects that may have multiple validation failures.
+///
+/// @deprecated Consider using specific error types and Either for single
+/// validation failures, or create domain-specific error aggregation types
+/// as needed. The generic ValidationError is being phased out in favor of
+/// more expressive, type-safe error hierarchies.
+@Deprecated(
+  'Consider using specific error types with Either for validation. '
+  'Create domain-specific error aggregation types if needed.',
+)
 class ValidationErrors extends Equatable {
   /// Creates a collection of validation errors.
+  @Deprecated(
+    'Consider using specific error types with Either for validation. '
+    'Create domain-specific error aggregation types if needed.',
+  )
   const ValidationErrors(this._errors);
 
   /// The list of validation errors (read-only).

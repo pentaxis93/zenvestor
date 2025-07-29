@@ -98,8 +98,7 @@ void main() {
           final result = CompanyName.create('');
           expect(result.isLeft(), isTrue);
           final error = result.swap().getOrElse((_) => throw Exception());
-          expect(error, isA<ValidationError>());
-          expect(error.field, equals('companyName'));
+          expect(error, isA<CompanyNameEmpty>());
           expect(error.message, contains('empty'));
         });
 
@@ -112,8 +111,7 @@ void main() {
             expect(result.isLeft(), isTrue,
                 reason: 'Should reject whitespace-only input: "$input"');
             final error = result.swap().getOrElse((_) => throw Exception());
-            expect(error, isA<ValidationError>());
-            expect(error.field, equals('companyName'));
+            expect(error, isA<CompanyNameEmpty>());
             expect(error.message, contains('empty'));
           }
         });
@@ -124,8 +122,7 @@ void main() {
             expect(result.isLeft(), isTrue,
                 reason: 'Should reject non-alphanumeric input: "$input"');
             final error = result.swap().getOrElse((_) => throw Exception());
-            expect(error, isA<ValidationError>());
-            expect(error.field, equals('companyName'));
+            expect(error, isA<CompanyNameNoAlphanumeric>());
             expect(error.message, contains('alphanumeric'));
           }
         });
@@ -135,8 +132,7 @@ void main() {
           final result = CompanyName.create(longName);
           expect(result.isLeft(), isTrue);
           final error = result.swap().getOrElse((_) => throw Exception());
-          expect(error, isA<ValidationError>());
-          expect(error.field, equals('companyName'));
+          expect(error, isA<CompanyNameTooLong>());
           expect(error.message, contains('255'));
         });
 
@@ -146,9 +142,9 @@ void main() {
             expect(result.isLeft(), isTrue,
                 reason: 'Should reject invalid character in: "$input"');
             final error = result.swap().getOrElse((_) => throw Exception());
-            expect(error, isA<ValidationError>());
-            expect(error.field, equals('companyName'));
-            expect(error.message, contains('characters'));
+            expect(error, isA<CompanyNameInvalidCharacters>());
+            final charError = error as CompanyNameInvalidCharacters;
+            expect(charError.message, contains('characters'));
           }
         });
       });

@@ -32,19 +32,13 @@ class TickerSymbol extends Equatable {
   /// - Converting to uppercase
   ///
   /// Returns a Right with the TickerSymbol if valid, or a Left with
-  /// a ValidationError if the input violates any business rules.
-  static Either<ValidationError, TickerSymbol> create(String input) {
+  /// a TickerSymbolError if the input violates any business rules.
+  static Either<TickerSymbolError, TickerSymbol> create(String input) {
     final trimmed = input.trim();
 
     // Check if empty after trimming
     if (trimmed.isEmpty) {
-      return Left(
-        ValidationError(
-          field: 'tickerSymbol',
-          invalidValue: input,
-          message: 'tickerSymbol is required',
-        ),
-      );
+      return Left(TickerSymbolEmpty(input));
     }
 
     // Normalize to uppercase
@@ -52,23 +46,12 @@ class TickerSymbol extends Equatable {
 
     // Check for valid characters (only A-Z) before checking length
     if (!_validPattern.hasMatch(normalized)) {
-      return Left(
-        ValidationError.invalidStockSymbol(
-          field: 'tickerSymbol',
-          invalidValue: input,
-        ),
-      );
+      return Left(TickerSymbolInvalidFormat(input));
     }
 
     // Check length after validating characters
     if (normalized.length > maxLength) {
-      return Left(
-        ValidationError.invalidLength(
-          field: 'tickerSymbol',
-          invalidValue: input,
-          maxLength: 5,
-        ),
-      );
+      return Left(TickerSymbolTooLong(normalized.length));
     }
 
     return Right(TickerSymbol._(normalized));

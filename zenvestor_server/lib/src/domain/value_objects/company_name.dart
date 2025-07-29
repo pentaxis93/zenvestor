@@ -40,56 +40,29 @@ class CompanyName extends Equatable {
   /// Creates a [CompanyName] from the given [input].
   ///
   /// Returns [Right] with a valid [CompanyName] if the input is valid,
-  /// or [Left] with a [ValidationError] if validation fails.
-  static Either<ValidationError, CompanyName> create(String input) {
+  /// or [Left] with a [CompanyNameError] if validation fails.
+  static Either<CompanyNameError, CompanyName> create(String input) {
     // Normalize the input
     final normalized = _normalize(input);
 
     // Check if empty after normalization
     if (normalized.isEmpty) {
-      return Left(
-        ValidationError(
-          field: 'companyName',
-          invalidValue: input,
-          message: 'Company name cannot be empty',
-        ),
-      );
+      return Left(CompanyNameEmpty(input));
     }
 
     // Check length constraint
     if (normalized.length > 255) {
-      return Left(
-        ValidationError.invalidLength(
-          field: 'companyName',
-          invalidValue: input,
-          maxLength: 255,
-        ),
-      );
+      return Left(CompanyNameTooLong(normalized.length));
     }
 
     // Check for at least one alphanumeric character
     if (!_hasAlphanumeric(normalized)) {
-      return Left(
-        ValidationError(
-          field: 'companyName',
-          invalidValue: input,
-          message:
-              'Company name must contain at least one alphanumeric character',
-        ),
-      );
+      return Left(CompanyNameNoAlphanumeric(normalized));
     }
 
     // Check for valid characters
     if (!_hasOnlyValidCharacters(normalized)) {
-      return Left(
-        ValidationError(
-          field: 'companyName',
-          invalidValue: input,
-          message: 'Company name contains invalid characters. '
-              'Only letters, numbers, spaces, and business punctuation '
-              "(.,'-&()) are allowed",
-        ),
-      );
+      return Left(CompanyNameInvalidCharacters(normalized));
     }
 
     return Right(CompanyName._(normalized));
