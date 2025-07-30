@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 
-part 'validation_error.dart';
 part 'shared/length_validation_error.dart';
 part 'shared/format_validation_error.dart';
 part 'shared/required_field_error.dart';
