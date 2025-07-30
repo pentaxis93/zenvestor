@@ -16,6 +16,16 @@ If it fails due to pre-commit pipeline checks, **your mission begins**: resolve 
 
 ---
 
+## 📊 Coverage Requirements
+
+This project requires **100% test coverage**. Use these scripts to verify:
+- `./scripts/test-coverage.sh` - Shows overall coverage percentages for server and flutter
+- `./scripts/find-untested-code.sh` - Lists all files with untested lines and shows the specific lines
+
+**Important:** Always use these project-specific scripts instead of running coverage tools directly.
+
+---
+
 ## 🧾 Writing a Great Commit Message (Conventional Format)
 
 Follow the [Conventional Commits](https://www.conventionalcommits.org) style for clarity and automation-friendliness:
@@ -46,9 +56,13 @@ docs: clarify usage of trading fee tiers
 If the commit fails:
 1. **Read the output** carefully — understand the root cause.
 2. **Fix each warning/error** thoroughly, not superficially.
-3. Run `make test`.
-4. Re-attempt commit.
-5. Repeat until ✅.
+3. For coverage issues:
+   - Run `./scripts/test-coverage.sh` to check overall coverage percentages
+   - Run `./scripts/find-untested-code.sh` to identify specific untested lines
+   - Write tests for any uncovered code
+4. Run `make test` if available, or re-run tests.
+5. Re-attempt commit.
+6. Repeat until ✅.
 
 ---
 
