@@ -7,6 +7,7 @@ part 'ticker_symbol_errors.dart';
 part 'company_name_errors.dart';
 part 'sic_code_errors.dart';
 part 'grade_errors.dart';
+part 'stock_errors.dart';
 
 /// Base class for all domain layer errors in the Zenvestor application.
 ///
