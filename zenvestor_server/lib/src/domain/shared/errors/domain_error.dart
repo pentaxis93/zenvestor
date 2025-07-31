@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 
 part 'length_validation_error.dart';
 part 'format_validation_error.dart';
@@ -8,6 +9,7 @@ part '../../stock/errors/company_name_errors.dart';
 part '../../stock/errors/sic_code_errors.dart';
 part '../../stock/errors/grade_errors.dart';
 part '../../stock/errors/stock_errors.dart';
+part '../../stock/errors/stock_repository_errors.dart';
 
 /// Base class for all domain layer errors in the Zenvestor application.
 ///
