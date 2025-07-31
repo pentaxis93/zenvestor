@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
+import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
 
 void main() {
   group('TickerSymbolError hierarchy', () {

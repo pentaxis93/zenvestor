@@ -1,4 +1,4 @@
-part of '../domain_error.dart';
+part of 'domain_error.dart';
 
 /// Interface for validation errors related to format or pattern violations.
 ///

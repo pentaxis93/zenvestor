@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';
-import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
+import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
 
 /// Represents a stock quality grade using the traditional academic
 /// grading scale.

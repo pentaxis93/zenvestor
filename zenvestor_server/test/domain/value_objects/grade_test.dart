@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
-import 'package:zenvestor_server/src/domain/value_objects/grade.dart';
+import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
+import 'package:zenvestor_server/src/domain/stock/value_objects/grade.dart';
 
 void main() {
   group('Grade', () {

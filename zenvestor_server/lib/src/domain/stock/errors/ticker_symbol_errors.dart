@@ -1,4 +1,4 @@
-part of 'domain_error.dart';
+part of '../../shared/errors/domain_error.dart';
 
 /// Base class for all ticker symbol validation errors.
 ///

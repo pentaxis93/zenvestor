@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:zenvestor_server/src/domain/errors/domain_error.dart';
-import 'package:zenvestor_server/src/domain/value_objects/ticker_symbol.dart';
+import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
+import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 
 import '../../fixtures/ticker_symbol_fixtures.dart';
 
