@@ -97,7 +97,7 @@ void main() {
           'should return StockAlreadyExistsError when '
           'stock with same ticker exists', () async {
         // Arrange
-        final error = StockAlreadyExistsError(validTicker);
+        final error = StockAlreadyExistsError(validTicker.value);
         when(() => repository.add(validStock)).thenAnswer(
           (_) async => left<StockRepositoryError, Stock>(error),
         );
@@ -110,8 +110,8 @@ void main() {
         result.fold(
           (err) {
             expect(err, isA<StockAlreadyExistsError>());
-            expect(
-                (err as StockAlreadyExistsError).ticker, equals(validTicker));
+            expect((err as StockAlreadyExistsError).ticker,
+                equals(validTicker.value));
           },
           (stock) => fail('Should return error'),
         );

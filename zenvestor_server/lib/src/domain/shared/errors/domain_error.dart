@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 
 part 'length_validation_error.dart';
 part 'format_validation_error.dart';

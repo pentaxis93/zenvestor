@@ -23,13 +23,13 @@ class StockAlreadyExistsError extends StockRepositoryError {
   const StockAlreadyExistsError(this.ticker);
 
   /// The ticker symbol that already exists.
-  final TickerSymbol ticker;
+  final String ticker;
 
   @override
   List<Object?> get props => [ticker];
 
   @override
-  String toString() => 'StockAlreadyExistsError(ticker: ${ticker.value})';
+  String toString() => 'StockAlreadyExistsError(ticker: $ticker)';
 }
 
 /// Error thrown when infrastructure-level storage operations fail.
