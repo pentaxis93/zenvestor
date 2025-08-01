@@ -105,20 +105,8 @@ class AddStockUseCase {
       // All optional fields default to None()
     );
 
-    // coverage:ignore-start
-    if (stockResult.isLeft()) {
-      // TODO(defensive): This check handles an "impossible" case where
-      // Stock.create fails with valid inputs. In practice, this should never
-      // happen with valid ID and timestamps. To test this would require
-      // injecting a Stock factory, which would add unnecessary complexity.
-      return left(
-        const StockValidationApplicationError(
-          message: 'Failed to create stock entity',
-        ),
-      );
-    }
-    // coverage:ignore-end
-
+    // Safe to unwrap: Stock.create only fails on invalid ID or timestamps,
+    // both of which are guaranteed valid by our construction
     final stock = stockResult.toNullable()!;
 
     // Step 4: Persist the stock
