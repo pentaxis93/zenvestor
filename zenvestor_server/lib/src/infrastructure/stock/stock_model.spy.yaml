@@ -1,0 +1,16 @@
+# Stock protocol model for Serverpod
+# This defines the database table and serialization for Stock entities
+
+class: Stock
+table: stocks
+fields:
+  tickerSymbol: String
+  companyName: String?
+  sicCode: String?
+  grade: String?
+  createdAt: DateTime
+  updatedAt: DateTime
+indexes:
+  ticker_symbol_index:
+    fields: tickerSymbol
+    unique: true
