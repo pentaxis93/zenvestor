@@ -7,7 +7,7 @@ part of '../../shared/errors/domain_error.dart';
 /// extending the general [DomainError] framework.
 ///
 /// All specific grade validation errors should extend this class.
-abstract class GradeError extends DomainError {
+sealed class GradeError extends DomainError {
   /// Creates a grade error.
   const GradeError();
 

@@ -1,7 +1,7 @@
 part of '../../shared/errors/domain_error.dart';
 
 /// Base class for all stock-related domain errors.
-abstract class StockError extends DomainError {
+sealed class StockError extends DomainError {
   /// Creates a [StockError].
   const StockError();
 }

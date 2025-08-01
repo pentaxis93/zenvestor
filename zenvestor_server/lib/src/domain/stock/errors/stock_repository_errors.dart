@@ -6,7 +6,7 @@ part of '../../shared/errors/domain_error.dart';
 /// during stock repository operations such as adding stocks or checking
 /// for existence. All stock repository errors should extend this class
 /// to ensure consistent error handling in the domain layer.
-abstract class StockRepositoryError extends DomainError {
+sealed class StockRepositoryError extends DomainError {
   /// Creates a [StockRepositoryError].
   const StockRepositoryError();
 }

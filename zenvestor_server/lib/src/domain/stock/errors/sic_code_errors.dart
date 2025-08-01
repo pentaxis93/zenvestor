@@ -7,7 +7,7 @@ part of '../../shared/errors/domain_error.dart';
 /// extending the general [DomainError] framework.
 ///
 /// All specific SIC code validation errors should extend this class.
-abstract class SicCodeError extends DomainError {
+sealed class SicCodeError extends DomainError {
   /// Creates a SIC code error.
   const SicCodeError();
 

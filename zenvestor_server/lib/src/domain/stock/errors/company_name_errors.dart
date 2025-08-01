@@ -7,7 +7,7 @@ part of '../../shared/errors/domain_error.dart';
 /// extending the general [DomainError] framework.
 ///
 /// All specific company name validation errors should extend this class.
-abstract class CompanyNameError extends DomainError {
+sealed class CompanyNameError extends DomainError {
   /// Creates a company name error.
   const CompanyNameError();
 

@@ -4,7 +4,7 @@ part of '../../shared/errors/application_error.dart';
 ///
 /// This abstract class serves as the foundation for errors that occur
 /// during stock-related use case execution in the application layer.
-abstract class StockApplicationError extends ApplicationError {
+sealed class StockApplicationError extends ApplicationError {
   /// Creates a stock application error.
   const StockApplicationError();
 }

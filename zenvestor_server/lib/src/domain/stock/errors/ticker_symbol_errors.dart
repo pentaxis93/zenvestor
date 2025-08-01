@@ -7,7 +7,7 @@ part of '../../shared/errors/domain_error.dart';
 /// extending the general [DomainError] framework.
 ///
 /// All specific ticker symbol validation errors should extend this class.
-abstract class TickerSymbolError extends DomainError {
+sealed class TickerSymbolError extends DomainError {
   /// Creates a ticker symbol error.
   const TickerSymbolError();
 

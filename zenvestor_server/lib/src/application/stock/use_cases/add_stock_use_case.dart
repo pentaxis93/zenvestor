@@ -126,18 +126,12 @@ class AddStockUseCase {
 
     if (addResult.isLeft()) {
       final error = addResult.getLeft().toNullable()!;
-      // The repository contract specifies that add() can only return
-      // StockAlreadyExistsError or StockStorageError, but we need
-      // a default case for exhaustiveness since StockRepositoryError
-      // is abstract (not sealed)
+      // StockRepositoryError is now sealed, so this switch is exhaustive
       return switch (error) {
         StockAlreadyExistsError() =>
           left(StockAlreadyExistsApplicationError(error.ticker)),
         StockStorageError() =>
           left(StockStorageApplicationError(error.message)),
-        // coverage:ignore-start
-        _ => left(const StockStorageApplicationError('Failed to add stock')),
-        // coverage:ignore-end
       };
     }
 
