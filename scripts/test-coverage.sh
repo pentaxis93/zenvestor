@@ -44,7 +44,8 @@ echo "Running tests in parallel..."
             --exclude-suffix=".g.dart,.freezed.dart" \
             --exclude-files="lib/src/generated/*,lib/src/birthday_reminder.dart,lib/src/web/routes/root.dart,lib/src/web/widgets/built_with_serverpod_page.dart,lib/server.dart,lib/src/greeting_endpoint.dart" 2>&1)
         # Extract coverage percentage from dlcov output
-        server_coverage=$(echo "$dlcov_output" | grep -oE "coverage [0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1)
+        # dlcov outputs: "[SUCCESS]: The total code coverage X%"
+        server_coverage=$(echo "$dlcov_output" | grep -oE "code coverage [0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1)
         echo "server:${server_coverage:-0}" > /tmp/server_coverage.tmp
     else
         echo "server:0" > /tmp/server_coverage.tmp
@@ -63,7 +64,8 @@ server_pid=$!
         # Exclude main.dart and generated files
         dlcov_output=$(dlcov -c 0 --include-untested-files=true --exclude-suffix=".g.dart,.freezed.dart" --exclude-files="lib/main.dart" 2>&1)
         # Extract coverage percentage from dlcov output
-        flutter_coverage=$(echo "$dlcov_output" | grep -oE "coverage [0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1)
+        # dlcov outputs: "[SUCCESS]: The total code coverage X%"
+        flutter_coverage=$(echo "$dlcov_output" | grep -oE "code coverage [0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1)
         echo "flutter:${flutter_coverage:-0}" > /tmp/flutter_coverage.tmp
     else
         echo "flutter:0" > /tmp/flutter_coverage.tmp
