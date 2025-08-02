@@ -5,3 +5,4 @@
 ### the conflict by removing and recreating the conflicting migration.
 
 20250717062805752
+20250802170344195-add-stocks-table
