@@ -61,8 +61,8 @@ jobs:
         working-directory: zenvestor_flutter
         run: flutter analyze --fatal-infos --fatal-warnings
 
-  # Parallel job: Test server code
-  test-server:
+  # Unified job: Test both server and Flutter code with coverage
+  test-coverage:
     needs: setup
     runs-on: ubuntu-latest
     
@@ -103,22 +103,34 @@ jobs:
         with:
           install-coverage-tools: 'true'
 
-      - name: Run server tests with coverage
-        working-directory: zenvestor_server
+      - name: Run tests with coverage
         run: |
-          dart test --coverage=coverage -j $(nproc)
-          dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib
-          # Remove generated files from coverage
-          lcov --remove coverage/lcov.info 'lib/src/generated/*' -o coverage/lcov.info
-          # Generate coverage report
-          coverage=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//' | head -1)
-          echo "Server coverage: ${coverage}%"
-          # Check coverage threshold
-          if [ $(echo "$coverage < 100" | bc -l) -eq 1 ]; then
-            echo "❌ Server coverage ${coverage}% is below 100% threshold"
+          # Run the coverage script
+          output=$(./scripts/test-coverage.sh)
+          echo "$output"
+          
+          # Extract coverage percentages
+          server_coverage=$(echo "$output" | grep "Server:" | grep -oE "[0-9]+(\.[0-9]+)?" | head -1)
+          flutter_coverage=$(echo "$output" | grep "Flutter:" | grep -oE "[0-9]+(\.[0-9]+)?" | head -1)
+          
+          echo ""
+          echo "Coverage threshold: 100%"
+          echo ""
+          
+          # Check server coverage
+          if [ $(echo "$server_coverage < 100" | bc -l) -eq 1 ]; then
+            echo "❌ Server coverage ${server_coverage}% is below 100% threshold"
             exit 1
           else
-            echo "✅ Server coverage ${coverage}% meets threshold"
+            echo "✅ Server coverage ${server_coverage}% meets threshold"
+          fi
+          
+          # Check flutter coverage
+          if [ $(echo "$flutter_coverage < 100" | bc -l) -eq 1 ]; then
+            echo "❌ Flutter coverage ${flutter_coverage}% is below 100% threshold"
+            exit 1
+          else
+            echo "✅ Flutter coverage ${flutter_coverage}% meets threshold"
           fi
         env:
           SERVERPOD_PASSWORD_database: ${{ secrets.POSTGRES_TEST_PASSWORD }}
@@ -130,36 +142,6 @@ jobs:
           name: server-coverage
           path: zenvestor_server/coverage/
 
-  # Parallel job: Test Flutter code
-  test-flutter:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Zenvestor environment
-        uses: ./.github/actions/setup-zenvestor
-        with:
-          install-coverage-tools: 'true'
-
-      - name: Run Flutter tests with coverage
-        working-directory: zenvestor_flutter
-        run: |
-          flutter test --coverage --concurrency=$(nproc)
-          # Remove main.dart from coverage
-          lcov --remove coverage/lcov.info 'lib/main.dart' -o coverage/lcov.info
-          # Generate coverage report
-          coverage=$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE "[0-9]+\.[0-9]+%" | sed 's/%//' | head -1)
-          echo "Flutter coverage: ${coverage}%"
-          # Check coverage threshold
-          if [ $(echo "$coverage < 100" | bc -l) -eq 1 ]; then
-            echo "❌ Flutter coverage ${coverage}% is below 100% threshold"
-            exit 1
-          else
-            echo "✅ Flutter coverage ${coverage}% meets threshold"
-          fi
-
       - name: Upload Flutter coverage
         uses: actions/upload-artifact@v4
         with:
@@ -168,7 +150,7 @@ jobs:
 
   # Final job: Combine results and generate reports
   coverage-report:
-    needs: [analyze-server, analyze-flutter, test-server, test-flutter]
+    needs: [analyze-server, analyze-flutter, test-coverage]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -204,8 +186,7 @@ jobs:
         run: |
           if [ "${{ needs.analyze-server.result }}" != "success" ] || \
              [ "${{ needs.analyze-flutter.result }}" != "success" ] || \
-             [ "${{ needs.test-server.result }}" != "success" ] || \
-             [ "${{ needs.test-flutter.result }}" != "success" ]; then
+             [ "${{ needs.test-coverage.result }}" != "success" ]; then
             echo "❌ One or more jobs failed"
             exit 1
           else
