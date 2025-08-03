@@ -1,0 +1,5 @@
+exception: StockDuplicateException
+serverOnly: false
+fields:
+  ticker: String
+  message: String

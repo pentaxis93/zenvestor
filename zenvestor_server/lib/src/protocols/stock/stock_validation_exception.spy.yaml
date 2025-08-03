@@ -1,0 +1,6 @@
+exception: StockValidationException
+serverOnly: false
+fields:
+  message: String
+  fieldName: String
+  validationType: StockValidationType

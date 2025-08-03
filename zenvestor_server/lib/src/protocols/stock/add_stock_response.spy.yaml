@@ -1,0 +1,10 @@
+class: AddStockResponse
+serverOnly: false
+fields:
+  id: String
+  ticker: String
+  companyName: String?
+  sicCode: String?
+  grade: String?
+  createdAt: DateTime
+  updatedAt: DateTime

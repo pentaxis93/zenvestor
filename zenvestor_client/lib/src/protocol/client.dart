@@ -11,8 +11,42 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _i1;
 import 'dart:async' as _i2;
-import 'package:zenvestor_client/src/protocol/greeting.dart' as _i3;
-import 'protocol.dart' as _i4;
+import 'package:zenvestor_client/src/protocol/protocols/stock/add_stock_response.dart'
+    as _i3;
+import 'package:zenvestor_client/src/protocol/protocols/stock/add_stock_request.dart'
+    as _i4;
+import 'package:zenvestor_client/src/protocol/greeting.dart' as _i5;
+import 'protocol.dart' as _i6;
+
+/// Serverpod endpoint for stock-related operations.
+///
+/// This endpoint serves as an adapter layer between Serverpod's protocol
+/// and the application's use cases, maintaining clean architecture boundaries.
+/// {@category Endpoint}
+class EndpointStock extends _i1.EndpointRef {
+  EndpointStock(_i1.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'stock';
+
+  /// Adds a new stock to the system.
+  ///
+  /// This method accepts a [session] and [request] containing the ticker
+  /// symbol, delegates to the use case for business logic, and returns the
+  /// created stock information or throws an appropriate StockException on
+  /// error.
+  ///
+  /// Error mapping:
+  /// - StockValidationApplicationError → 400 Bad Request
+  /// - StockAlreadyExistsApplicationError → 409 Conflict
+  /// - StockStorageApplicationError → 503 Service Unavailable
+  _i2.Future<_i3.AddStockResponse> addStock(_i4.AddStockRequest request) =>
+      caller.callServerEndpoint<_i3.AddStockResponse>(
+        'stock',
+        'addStock',
+        {'request': request},
+      );
+}
 
 /// This is an example endpoint that returns a greeting message through
 /// its [hello] method.
@@ -24,8 +58,8 @@ class EndpointGreeting extends _i1.EndpointRef {
   String get name => 'greeting';
 
   /// Returns a personalized greeting message: "Hello {name}".
-  _i2.Future<_i3.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_i3.Greeting>(
+  _i2.Future<_i5.Greeting> hello(String name) =>
+      caller.callServerEndpoint<_i5.Greeting>(
         'greeting',
         'hello',
         {'name': name},
@@ -48,7 +82,7 @@ class Client extends _i1.ServerpodClientShared {
     bool? disconnectStreamsOnLostInternetConnection,
   }) : super(
           host,
-          _i4.Protocol(),
+          _i6.Protocol(),
           securityContext: securityContext,
           authenticationKeyManager: authenticationKeyManager,
           streamingConnectionTimeout: streamingConnectionTimeout,
@@ -58,13 +92,19 @@ class Client extends _i1.ServerpodClientShared {
           disconnectStreamsOnLostInternetConnection:
               disconnectStreamsOnLostInternetConnection,
         ) {
+    stock = EndpointStock(this);
     greeting = EndpointGreeting(this);
   }
+
+  late final EndpointStock stock;
 
   late final EndpointGreeting greeting;
 
   @override
-  Map<String, _i1.EndpointRef> get endpointRefLookup => {'greeting': greeting};
+  Map<String, _i1.EndpointRef> get endpointRefLookup => {
+        'stock': stock,
+        'greeting': greeting,
+      };
 
   @override
   Map<String, _i1.ModuleEndpointCaller> get moduleLookup => {};

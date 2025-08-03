@@ -1,0 +1,7 @@
+enum: StockValidationType
+serverOnly: false
+values:
+  - emptyField
+  - invalidFormat
+  - tooLong
+  - tooShort

@@ -1,0 +1,4 @@
+class: AddStockRequest
+serverOnly: false
+fields:
+  ticker: String

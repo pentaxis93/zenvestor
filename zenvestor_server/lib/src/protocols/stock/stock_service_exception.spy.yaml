@@ -1,0 +1,4 @@
+exception: StockServiceException
+serverOnly: false
+fields:
+  message: String, default="Service temporarily unavailable"
