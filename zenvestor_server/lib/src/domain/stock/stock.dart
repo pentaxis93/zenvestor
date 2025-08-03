@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:uuid/uuid.dart';
-import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
+import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/value_objects/company_name.dart';
 import 'package:zenvestor_server/src/domain/stock/value_objects/grade.dart';
 import 'package:zenvestor_server/src/domain/stock/value_objects/sic_code.dart';

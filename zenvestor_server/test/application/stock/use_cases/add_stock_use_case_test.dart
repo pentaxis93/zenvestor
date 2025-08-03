@@ -6,8 +6,8 @@ import 'package:zenvestor_server/src/application/shared/errors/application_error
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_request.dart';
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_response.dart';
 import 'package:zenvestor_server/src/application/stock/use_cases/add_stock_use_case.dart';
-import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
 import 'package:zenvestor_server/src/domain/stock/stock.dart';
+import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 

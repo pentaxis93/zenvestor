@@ -1,7 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:serverpod/serverpod.dart';
-import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
 import 'package:zenvestor_server/src/domain/stock/stock.dart';
+import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 import 'package:zenvestor_server/src/generated/infrastructure/stock/stock_model.dart'

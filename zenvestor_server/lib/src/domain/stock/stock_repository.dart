@@ -1,6 +1,6 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
 import 'package:zenvestor_server/src/domain/stock/stock.dart';
+import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 
 /// Repository interface for managing stock entities in the domain layer.
