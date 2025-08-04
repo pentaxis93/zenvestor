@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' show CompanyName;
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/company_name.dart';
+
 import '../../fixtures/company_name_fixtures.dart';
 
 void main() {

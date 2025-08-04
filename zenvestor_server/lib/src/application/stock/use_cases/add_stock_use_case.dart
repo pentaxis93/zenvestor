@@ -1,12 +1,12 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:uuid/uuid.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' show TickerSymbol;
 import 'package:zenvestor_server/src/application/shared/errors/application_error.dart';
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_request.dart';
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_response.dart';
 import 'package:zenvestor_server/src/domain/stock/stock.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 
 /// Use case for adding a new stock to the system.
 ///

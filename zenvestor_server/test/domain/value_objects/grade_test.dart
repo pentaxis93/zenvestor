@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' show Grade;
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/grade.dart';
 
 void main() {
   group('Grade', () {

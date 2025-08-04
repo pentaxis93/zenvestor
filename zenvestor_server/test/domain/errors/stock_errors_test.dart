@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
+import 'package:zenvestor_domain/shared/errors.dart' show DomainError;
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 
 void main() {

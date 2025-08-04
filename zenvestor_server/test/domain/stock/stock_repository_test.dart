@@ -2,10 +2,10 @@ import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:uuid/uuid.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' show TickerSymbol;
 import 'package:zenvestor_server/src/domain/stock/stock.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 
 import '../../fixtures/domain_fixtures.dart';
 

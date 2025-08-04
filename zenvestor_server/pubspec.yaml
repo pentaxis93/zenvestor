@@ -2,6 +2,7 @@ name: zenvestor_server
 description: Starting point for a Serverpod server.
 version: 0.0.0
 homepage: https://zenvestor.app
+publish_to: none
 environment:
   sdk: '>=3.5.0 <4.0.0'
 dependencies:
@@ -10,6 +11,8 @@ dependencies:
   meta: ^1.17.0
   serverpod: 2.9.1
   uuid: ^4.2.1
+  zenvestor_domain:
+    path: ../packages/zenvestor_domain
 dev_dependencies:
   lints: '>=3.0.0 <7.0.0'
   mocktail: ^1.0.4

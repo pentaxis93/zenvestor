@@ -1,7 +1,5 @@
-import 'package:zenvestor_server/src/domain/stock/value_objects/company_name.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/grade.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/sic_code.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart'
+    show CompanyName, Grade, SicCode, TickerSymbol;
 
 /// Domain-specific test fixtures for creating valid value objects.
 class DomainFixtures {

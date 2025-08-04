@@ -1,10 +1,8 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:zenvestor_server/src/domain/shared/errors/domain_error.dart';
+import 'package:zenvestor_domain/shared/errors.dart' show DomainError;
+import 'package:zenvestor_domain/zenvestor_domain.dart'
+    show CompanyName, Grade, SicCode, TickerSymbol;
 import 'package:zenvestor_server/src/domain/stock/stock.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/company_name.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/grade.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/sic_code.dart';
-import 'package:zenvestor_server/src/domain/stock/value_objects/ticker_symbol.dart';
 import 'package:zenvestor_server/src/generated/infrastructure/stock/stock_model.dart'
     as serverpod_model;
 
