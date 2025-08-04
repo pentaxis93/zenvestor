@@ -1,11 +1,11 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:serverpod/serverpod.dart';
-import 'package:zenvestor_domain/zenvestor_domain.dart' show TickerSymbol;
-import 'package:zenvestor_server/src/domain/stock/stock.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 import 'package:zenvestor_server/src/generated/infrastructure/stock/stock_model.dart'
     as serverpod_model;
+import 'package:zenvestor_server/src/infrastructure/persistence/stock/stock_persistence_model.dart';
 import 'package:zenvestor_server/src/infrastructure/stock/mappers/stock_mapper.dart';
 
 /// Serverpod implementation of the stock repository.
@@ -26,7 +26,8 @@ class StockRepositoryServerpod implements IStockRepository {
   // database methods (Stock.db.insertRow) which cannot be mocked.
   // Proper testing would require integration tests with a real database.
   @override
-  Future<Either<StockRepositoryError, Stock>> add(Stock stock) async {
+  Future<Either<StockRepositoryError, shared.Stock>> add(
+      shared.Stock stock) async {
     try {
       // Check if ticker already exists
       final existsResult = await existsByTicker(stock.ticker);
@@ -40,8 +41,32 @@ class StockRepositoryServerpod implements IStockRepository {
         return Left(StockAlreadyExistsError(stock.ticker.value));
       }
 
-      // Convert domain entity to Serverpod model
-      final serverpodStock = StockMapper.toServerpod(stock, null);
+      // Create persistence model with generated infrastructure data
+      final now = DateTime.now();
+      final stockId = const Uuid().v4();
+
+      final persistenceModelResult = StockPersistenceModel.create(
+        id: stockId,
+        ticker: stock.ticker,
+        name: stock.name,
+        sicCode: stock.sicCode,
+        grade: stock.grade,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      if (persistenceModelResult.isLeft()) {
+        // Map infrastructure errors to domain repository errors
+        final error = persistenceModelResult.getLeft().toNullable()!;
+        return Left(StockStorageError(
+          'Failed to create persistence model: $error',
+        ));
+      }
+
+      final persistenceModel = persistenceModelResult.toNullable()!;
+
+      // Convert persistence model to Serverpod model
+      final serverpodStock = StockMapper.toServerpod(persistenceModel, null);
 
       // Insert into database
       final insertedStock = await serverpod_model.Stock.db.insertRow(
@@ -49,21 +74,30 @@ class StockRepositoryServerpod implements IStockRepository {
         serverpodStock,
       );
 
-      // Convert back to domain entity
-      final domainResult = StockMapper.toDomain(insertedStock, stock.id);
+      // Convert back to domain entity via persistence model
+      final persistenceResult = StockMapper.toPersistenceModel(
+        insertedStock,
+        stockId,
+      );
 
-      return domainResult.mapLeft((error) {
-        // This shouldn't happen as we're mapping back our own data,
-        // but handle it gracefully
+      if (persistenceResult.isLeft()) {
         _session.log(
-          'Failed to map inserted stock back to domain',
+          'Failed to map inserted stock back to persistence model',
           level: LogLevel.error,
-          exception: error,
+          exception: persistenceResult.getLeft().toNullable(),
         );
-        return StockStorageError(
-          'Failed to map inserted stock: $error',
-        );
-      });
+        final leftError = persistenceResult.getLeft().toNullable();
+        return Left(StockStorageError(
+          'Failed to map inserted stock: $leftError',
+        ));
+      }
+
+      final mappedPersistenceModel = persistenceResult.toNullable()!;
+      final domainStock = mappedPersistenceModel.stock;
+
+      return Right(domainStock);
+      // This shouldn't happen as we're mapping back our own data,
+      // but handle it gracefully
     } on DatabaseException catch (e) {
       // Handle specific database exceptions
       if (e.message.contains('unique constraint') ||
@@ -102,7 +136,7 @@ class StockRepositoryServerpod implements IStockRepository {
   // Proper testing would require integration tests with a real database.
   @override
   Future<Either<StockRepositoryError, bool>> existsByTicker(
-    TickerSymbol ticker,
+    shared.TickerSymbol ticker,
   ) async {
     try {
       // Query for stocks with the given ticker

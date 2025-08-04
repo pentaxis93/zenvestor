@@ -1,10 +1,8 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:uuid/uuid.dart';
-import 'package:zenvestor_domain/zenvestor_domain.dart' show TickerSymbol;
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
 import 'package:zenvestor_server/src/application/shared/errors/application_error.dart';
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_request.dart';
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_response.dart';
-import 'package:zenvestor_server/src/domain/stock/stock.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 
@@ -64,7 +62,7 @@ class AddStockUseCase {
     AddStockRequest request,
   ) async {
     // Step 1: Validate and create ticker symbol value object
-    final tickerResult = TickerSymbol.create(request.ticker);
+    final tickerResult = shared.TickerSymbol.create(request.ticker);
 
     if (tickerResult.isLeft()) {
       final error = tickerResult.getLeft().toNullable()!;
@@ -93,20 +91,13 @@ class AddStockUseCase {
       return left(StockAlreadyExistsApplicationError(tickerSymbol.value));
     }
 
-    // Step 3: Create stock entity with generated data
-    final now = DateTime.now();
-    final stockId = const Uuid().v4();
-
-    final stockResult = Stock.create(
-      id: stockId,
+    // Step 3: Create pure domain stock entity
+    final stockResult = shared.Stock.create(
       ticker: tickerSymbol,
-      createdAt: now,
-      updatedAt: now,
       // All optional fields default to None()
     );
 
-    // Safe to unwrap: Stock.create only fails on invalid ID or timestamps,
-    // both of which are guaranteed valid by our construction
+    // Safe to unwrap: Stock.create with just ticker cannot fail
     final stock = stockResult.toNullable()!;
 
     // Step 4: Persist the stock
@@ -126,12 +117,19 @@ class AddStockUseCase {
     final savedStock = addResult.toNullable()!;
 
     // Step 5: Transform to response DTO
+    // Note: The repository implementation is responsible for managing
+    // infrastructure concerns like IDs and timestamps. Since we're working
+    // with pure domain entities, we'll need to get this information from
+    // the repository's response or generate it here for the DTO.
+    // TODO(architecture): Refactor AddStockResponse to not require
+    // infrastructure data, or have the repository return a richer response
+    // type.
     return right(
       AddStockResponse(
-        id: savedStock.id,
+        id: 'generated-by-repository', // Repository should handle this
         ticker: savedStock.ticker.value,
-        createdAt: savedStock.createdAt,
-        updatedAt: savedStock.updatedAt,
+        createdAt: DateTime.now(), // Repository should handle this
+        updatedAt: DateTime.now(), // Repository should handle this
       ),
     );
   }

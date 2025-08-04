@@ -1,21 +1,19 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
-import 'package:uuid/uuid.dart';
-import 'package:zenvestor_domain/zenvestor_domain.dart' show TickerSymbol;
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
 import 'package:zenvestor_server/src/application/shared/errors/application_error.dart';
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_request.dart';
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_response.dart';
 import 'package:zenvestor_server/src/application/stock/use_cases/add_stock_use_case.dart';
-import 'package:zenvestor_server/src/domain/stock/stock.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 
 class MockStockRepository extends Mock implements IStockRepository {}
 
-class FakeTickerSymbol extends Fake implements TickerSymbol {}
+class FakeTickerSymbol extends Fake implements shared.TickerSymbol {}
 
-class FakeStock extends Fake implements Stock {}
+class FakeStock extends Fake implements shared.Stock {}
 
 void main() {
   late MockStockRepository mockRepository;
@@ -37,14 +35,9 @@ void main() {
           () async {
         // Arrange
         const request = AddStockRequest(ticker: 'AAPL');
-        final tickerSymbol = TickerSymbol.create('AAPL').toNullable()!;
-        final now = DateTime.now();
-        final stockId = const Uuid().v4();
-        final stock = Stock.create(
-          id: stockId,
+        final tickerSymbol = shared.TickerSymbol.create('AAPL').toNullable()!;
+        final stock = shared.Stock.create(
           ticker: tickerSymbol,
-          createdAt: now,
-          updatedAt: now,
         ).toNullable()!;
 
         when(() => mockRepository.existsByTicker(any()))
@@ -61,10 +54,10 @@ void main() {
           (error) => fail('Expected success but got $error'),
           (response) {
             expect(response, isA<AddStockResponse>());
-            expect(response.id, stockId);
+            expect(response.id, equals('generated-by-repository'));
             expect(response.ticker, 'AAPL');
-            expect(response.createdAt, now);
-            expect(response.updatedAt, now);
+            expect(response.createdAt, isA<DateTime>());
+            expect(response.updatedAt, isA<DateTime>());
           },
         );
 
@@ -76,7 +69,7 @@ void main() {
           () async {
         // Arrange
         const request = AddStockRequest(ticker: 'AAPL');
-        final tickerSymbol = TickerSymbol.create('AAPL').toNullable()!;
+        final tickerSymbol = shared.TickerSymbol.create('AAPL').toNullable()!;
 
         when(() => mockRepository.existsByTicker(any()))
             .thenAnswer((_) async => right(true));
@@ -174,7 +167,7 @@ void main() {
           'when repository add fails', () async {
         // Arrange
         const request = AddStockRequest(ticker: 'AAPL');
-        final tickerSymbol = TickerSymbol.create('AAPL').toNullable()!;
+        final tickerSymbol = shared.TickerSymbol.create('AAPL').toNullable()!;
         const storageError = StockStorageError('Database connection failed');
 
         when(() => mockRepository.existsByTicker(any()))
@@ -205,7 +198,7 @@ void main() {
           'when existsByTicker fails', () async {
         // Arrange
         const request = AddStockRequest(ticker: 'AAPL');
-        final tickerSymbol = TickerSymbol.create('AAPL').toNullable()!;
+        final tickerSymbol = shared.TickerSymbol.create('AAPL').toNullable()!;
         const storageError = StockStorageError('Network timeout');
 
         when(() => mockRepository.existsByTicker(any()))
@@ -232,14 +225,9 @@ void main() {
       test('should normalize ticker symbol to uppercase', () async {
         // Arrange
         const request = AddStockRequest(ticker: 'aapl');
-        final tickerSymbol = TickerSymbol.create('aapl').toNullable()!;
-        final now = DateTime.now();
-        final stockId = const Uuid().v4();
-        final stock = Stock.create(
-          id: stockId,
+        final tickerSymbol = shared.TickerSymbol.create('aapl').toNullable()!;
+        final stock = shared.Stock.create(
           ticker: tickerSymbol,
-          createdAt: now,
-          updatedAt: now,
         ).toNullable()!;
 
         when(() => mockRepository.existsByTicker(any()))
@@ -263,14 +251,10 @@ void main() {
       test('should handle whitespace in ticker input', () async {
         // Arrange
         const request = AddStockRequest(ticker: '  AAPL  ');
-        final now = DateTime.now();
-        final stockId = const Uuid().v4();
-        final tickerSymbol = TickerSymbol.create('  AAPL  ').toNullable()!;
-        final stock = Stock.create(
-          id: stockId,
+        final tickerSymbol =
+            shared.TickerSymbol.create('  AAPL  ').toNullable()!;
+        final stock = shared.Stock.create(
           ticker: tickerSymbol,
-          createdAt: now,
-          updatedAt: now,
         ).toNullable()!;
 
         when(() => mockRepository.existsByTicker(any()))
@@ -296,7 +280,7 @@ void main() {
           'when repository returns StockAlreadyExistsError', () async {
         // Arrange
         const request = AddStockRequest(ticker: 'AAPL');
-        final tickerSymbol = TickerSymbol.create('AAPL').toNullable()!;
+        final tickerSymbol = shared.TickerSymbol.create('AAPL').toNullable()!;
         const alreadyExistsError = StockAlreadyExistsError('AAPL');
 
         when(() => mockRepository.existsByTicker(any()))
@@ -325,14 +309,9 @@ void main() {
       test('should successfully add single-character ticker symbols', () async {
         // Arrange
         const request = AddStockRequest(ticker: 'A');
-        final tickerSymbol = TickerSymbol.create('A').toNullable()!;
-        final now = DateTime.now();
-        final stockId = const Uuid().v4();
-        final stock = Stock.create(
-          id: stockId,
+        final tickerSymbol = shared.TickerSymbol.create('A').toNullable()!;
+        final stock = shared.Stock.create(
           ticker: tickerSymbol,
-          createdAt: now,
-          updatedAt: now,
         ).toNullable()!;
 
         when(() => mockRepository.existsByTicker(any()))

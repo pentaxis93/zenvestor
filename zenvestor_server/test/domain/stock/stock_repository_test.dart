@@ -1,9 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
-import 'package:uuid/uuid.dart';
-import 'package:zenvestor_domain/zenvestor_domain.dart' show TickerSymbol;
-import 'package:zenvestor_server/src/domain/stock/stock.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 
@@ -11,9 +9,9 @@ import '../../fixtures/domain_fixtures.dart';
 
 class MockStockRepository extends Mock implements IStockRepository {}
 
-class FakeStock extends Fake implements Stock {}
+class FakeStock extends Fake implements shared.Stock {}
 
-class FakeTickerSymbol extends Fake implements TickerSymbol {}
+class FakeTickerSymbol extends Fake implements shared.TickerSymbol {}
 
 void main() {
   setUpAll(() {
@@ -23,19 +21,16 @@ void main() {
 
   group('IStockRepository', () {
     late IStockRepository repository;
-    late Stock validStock;
-    late TickerSymbol validTicker;
+    late shared.Stock validStock;
+    late shared.TickerSymbol validTicker;
 
     setUp(() {
       repository = MockStockRepository();
       validTicker = DomainFixtures.tickerSymbol();
 
       // Create a valid stock for testing
-      final stockResult = Stock.create(
-        id: const Uuid().v4(),
+      final stockResult = shared.Stock.create(
         ticker: validTicker,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
         name: Some(DomainFixtures.companyName()),
         sicCode: Some(DomainFixtures.sicCode()),
         grade: Some(DomainFixtures.grade()),
@@ -62,7 +57,7 @@ void main() {
 
         // Test add method signature
         when(() => repository.add(any())).thenAnswer(
-          (_) async => right<StockRepositoryError, Stock>(validStock),
+          (_) async => right<StockRepositoryError, shared.Stock>(validStock),
         );
 
         // Test existsByTicker method signature
@@ -75,10 +70,10 @@ void main() {
     group('add', () {
       test(
           'should accept Stock parameter and '
-          'return Either<StockRepositoryError, Stock>', () async {
+          'return Either<StockRepositoryError, shared.Stock>', () async {
         // Arrange
         when(() => repository.add(validStock)).thenAnswer(
-          (_) async => right<StockRepositoryError, Stock>(validStock),
+          (_) async => right<StockRepositoryError, shared.Stock>(validStock),
         );
 
         // Act
@@ -99,7 +94,7 @@ void main() {
         // Arrange
         final error = StockAlreadyExistsError(validTicker.value);
         when(() => repository.add(validStock)).thenAnswer(
-          (_) async => left<StockRepositoryError, Stock>(error),
+          (_) async => left<StockRepositoryError, shared.Stock>(error),
         );
 
         // Act
@@ -122,7 +117,7 @@ void main() {
         // Arrange
         const error = StockStorageError('Database connection failed');
         when(() => repository.add(validStock)).thenAnswer(
-          (_) async => left<StockRepositoryError, Stock>(error),
+          (_) async => left<StockRepositoryError, shared.Stock>(error),
         );
 
         // Act
@@ -148,7 +143,7 @@ void main() {
 
         // Only Stock should be accepted
         when(() => repository.add(validStock)).thenAnswer(
-          (_) async => right<StockRepositoryError, Stock>(validStock),
+          (_) async => right<StockRepositoryError, shared.Stock>(validStock),
         );
 
         // This verifies the parameter is of type Stock
@@ -238,12 +233,13 @@ void main() {
         // This test verifies that all methods follow the functional
         // error handling pattern
 
-        // add returns Future<Either<StockRepositoryError, Stock>>
+        // add returns Future<Either<StockRepositoryError, shared.Stock>>
         when(() => repository.add(any())).thenAnswer(
-          (_) async => right<StockRepositoryError, Stock>(validStock),
+          (_) async => right<StockRepositoryError, shared.Stock>(validStock),
         );
         final addResult = repository.add(validStock);
-        expect(addResult, isA<Future<Either<StockRepositoryError, Stock>>>());
+        expect(addResult,
+            isA<Future<Either<StockRepositoryError, shared.Stock>>>());
 
         // existsByTicker returns Future<Either<StockRepositoryError, bool>>
         when(() => repository.existsByTicker(any())).thenAnswer(

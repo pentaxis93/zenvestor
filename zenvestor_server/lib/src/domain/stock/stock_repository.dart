@@ -1,6 +1,5 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:zenvestor_domain/zenvestor_domain.dart' show TickerSymbol;
-import 'package:zenvestor_server/src/domain/stock/stock.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 
 /// Repository interface for managing stock entities in the domain layer.
@@ -17,21 +16,21 @@ import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 abstract interface class IStockRepository {
   /// Adds a new stock to the repository.
   ///
-  /// This operation persists the provided [stock] and returns the
-  /// persisted version, which may include storage-generated fields
-  /// such as updated timestamps or version numbers.
+  /// This operation persists the provided [stock]. The repository
+  /// implementation is responsible for handling infrastructure concerns
+  /// such as generating IDs and managing timestamps.
   ///
   /// The operation enforces the business rule that each stock must
   /// have a unique ticker symbol. Attempting to add a stock with a
   /// ticker that already exists will result in a failure.
   ///
   /// Returns:
-  /// - [Right] containing the persisted [Stock] on success
+  /// - [Right] containing the domain [shared.Stock] on success
   /// - [Left] containing [StockAlreadyExistsError] if a stock with
   ///   the same ticker already exists
   /// - [Left] containing [StockStorageError] if infrastructure
   ///   operations fail
-  Future<Either<StockRepositoryError, Stock>> add(Stock stock);
+  Future<Either<StockRepositoryError, shared.Stock>> add(shared.Stock stock);
 
   /// Checks whether a stock with the given ticker symbol exists.
   ///
@@ -45,6 +44,6 @@ abstract interface class IStockRepository {
   /// - [Left] containing [StockStorageError] if infrastructure
   ///   operations fail
   Future<Either<StockRepositoryError, bool>> existsByTicker(
-    TickerSymbol ticker,
+    shared.TickerSymbol ticker,
   );
 }

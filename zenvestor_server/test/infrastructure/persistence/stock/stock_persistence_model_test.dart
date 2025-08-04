@@ -1,19 +1,18 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:test/test.dart';
 import 'package:uuid/uuid.dart';
-import 'package:zenvestor_domain/zenvestor_domain.dart'
-    show CompanyName, Grade, SicCode, TickerSymbol;
-import 'package:zenvestor_server/src/domain/stock/stock.dart';
-import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import 'package:zenvestor_server/src/infrastructure/persistence/stock/persistence_errors.dart';
+import 'package:zenvestor_server/src/infrastructure/persistence/stock/stock_persistence_model.dart';
 
-import '../../fixtures/domain_fixtures.dart';
+import '../../../fixtures/domain_fixtures.dart';
 
 void main() {
-  group('Stock Entity', () {
-    late TickerSymbol validTicker;
-    late CompanyName validName;
-    late SicCode validSicCode;
-    late Grade validGrade;
+  group('StockPersistenceModel', () {
+    late shared.TickerSymbol validTicker;
+    late shared.CompanyName validName;
+    late shared.SicCode validSicCode;
+    late shared.Grade validGrade;
     late String validId;
     late DateTime validCreatedAt;
     late DateTime validUpdatedAt;
@@ -30,7 +29,7 @@ void main() {
 
     group('Construction', () {
       test('should create a valid stock with all fields', () {
-        final result = Stock.create(
+        final result = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           createdAt: validCreatedAt,
@@ -56,7 +55,7 @@ void main() {
       });
 
       test('should create a valid stock with only required fields', () {
-        final result = Stock.create(
+        final result = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           createdAt: validCreatedAt,
@@ -79,7 +78,7 @@ void main() {
       });
 
       test('should create a valid stock with partial optional fields', () {
-        final result = Stock.create(
+        final result = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           createdAt: validCreatedAt,
@@ -104,7 +103,7 @@ void main() {
 
       test('should fail when id is empty', () {
         const emptyId = '';
-        final result = Stock.create(
+        final result = StockPersistenceModel.create(
           id: emptyId,
           ticker: validTicker,
           name: Some(validName),
@@ -117,8 +116,8 @@ void main() {
         expect(result.isLeft(), isTrue);
         result.fold(
           (error) {
-            expect(error, isA<StockInvalidId>());
-            final stockError = error as StockInvalidId;
+            expect(error, isA<InvalidStockId>());
+            final stockError = error as InvalidStockId;
             expect(stockError.invalidId, equals(emptyId));
             expect(stockError.toString(), contains(emptyId));
           },
@@ -128,7 +127,7 @@ void main() {
 
       test('should fail when id is not a valid UUID', () {
         const invalidId = 'not-a-uuid';
-        final result = Stock.create(
+        final result = StockPersistenceModel.create(
           id: invalidId,
           ticker: validTicker,
           name: Some(validName),
@@ -141,8 +140,8 @@ void main() {
         expect(result.isLeft(), isTrue);
         result.fold(
           (error) {
-            expect(error, isA<StockInvalidId>());
-            final stockError = error as StockInvalidId;
+            expect(error, isA<InvalidStockId>());
+            final stockError = error as InvalidStockId;
             expect(stockError.invalidId, equals(invalidId));
             expect(stockError.toString(), contains(invalidId));
           },
@@ -155,7 +154,7 @@ void main() {
         final invalidUpdatedAt =
             DateTime.now().subtract(const Duration(days: 1));
 
-        final result = Stock.create(
+        final result = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           name: Some(validName),
@@ -168,8 +167,8 @@ void main() {
         expect(result.isLeft(), isTrue);
         result.fold(
           (error) {
-            expect(error, isA<StockInvalidTimestamps>());
-            final timestampError = error as StockInvalidTimestamps;
+            expect(error, isA<InvalidStockTimestamps>());
+            final timestampError = error as InvalidStockTimestamps;
             expect(timestampError.createdAt, equals(invalidCreatedAt));
             expect(timestampError.updatedAt, equals(invalidUpdatedAt));
             expect(timestampError.toString(), contains('createdAt:'));
@@ -181,7 +180,7 @@ void main() {
 
       test('should succeed when createdAt equals updatedAt', () {
         final sameTime = DateTime.now();
-        final result = Stock.create(
+        final result = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           name: Some(validName),
@@ -197,7 +196,7 @@ void main() {
 
     group('Equality', () {
       test('should be equal when IDs are the same', () {
-        final stock1 = Stock.create(
+        final stock1 = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           createdAt: validCreatedAt,
@@ -207,7 +206,7 @@ void main() {
           grade: Some(validGrade),
         ).getOrElse((l) => throw Exception('Failed to create stock1'));
 
-        final stock2 = Stock.create(
+        final stock2 = StockPersistenceModel.create(
           id: validId,
           ticker: DomainFixtures.tickerSymbol(symbol: 'DIFF'),
           createdAt: DateTime.now().subtract(const Duration(days: 10)),
@@ -222,7 +221,7 @@ void main() {
       });
 
       test('should not be equal when IDs are different', () {
-        final stock1 = Stock.create(
+        final stock1 = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           createdAt: validCreatedAt,
@@ -232,7 +231,7 @@ void main() {
           grade: Some(validGrade),
         ).getOrElse((l) => throw Exception('Failed to create stock1'));
 
-        final stock2 = Stock.create(
+        final stock2 = StockPersistenceModel.create(
           id: const Uuid().v4(),
           ticker: validTicker,
           createdAt: validCreatedAt,
@@ -248,10 +247,10 @@ void main() {
     });
 
     group('copyWith', () {
-      late Stock originalStock;
+      late StockPersistenceModel originalStock;
 
       setUp(() {
-        originalStock = Stock.create(
+        originalStock = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           createdAt: validCreatedAt,
@@ -341,7 +340,7 @@ void main() {
 
     group('toString', () {
       test('should provide a readable string representation', () {
-        final stock = Stock.create(
+        final stock = StockPersistenceModel.create(
           id: validId,
           ticker: validTicker,
           createdAt: validCreatedAt,

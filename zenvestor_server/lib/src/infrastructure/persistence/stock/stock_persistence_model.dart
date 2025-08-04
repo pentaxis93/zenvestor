@@ -2,17 +2,17 @@ import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:uuid/uuid.dart';
 import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
-import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
+import 'package:zenvestor_server/src/infrastructure/persistence/stock/persistence_errors.dart';
 
-/// Server-specific wrapper around the shared domain Stock entity.
+/// Persistence model for Stock entities.
 ///
-/// This class extends the shared Stock with infrastructure concerns
-/// like database IDs and timestamps while preserving all domain logic.
-class ServerStock extends Equatable {
+/// This infrastructure class handles the persistence concerns (IDs, timestamps)
+/// while delegating all domain logic to the wrapped Stock entity.
+class StockPersistenceModel extends Equatable {
   /// Private constructor to ensure immutability.
-  const ServerStock._({
+  const StockPersistenceModel._({
     required this.id,
-    required this.domainStock,
+    required this.stock,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -21,7 +21,7 @@ class ServerStock extends Equatable {
   final String id;
 
   /// The wrapped shared domain Stock containing business logic.
-  final shared.Stock domainStock;
+  final shared.Stock stock;
 
   /// Timestamp when the stock was created.
   final DateTime createdAt;
@@ -30,22 +30,22 @@ class ServerStock extends Equatable {
   final DateTime updatedAt;
 
   /// Delegates to the wrapped domain stock for ticker.
-  shared.TickerSymbol get ticker => domainStock.ticker;
+  shared.TickerSymbol get ticker => stock.ticker;
 
   /// Delegates to the wrapped domain stock for name.
-  Option<shared.CompanyName> get name => domainStock.name;
+  Option<shared.CompanyName> get name => stock.name;
 
   /// Delegates to the wrapped domain stock for SIC code.
-  Option<shared.SicCode> get sicCode => domainStock.sicCode;
+  Option<shared.SicCode> get sicCode => stock.sicCode;
 
   /// Delegates to the wrapped domain stock for grade.
-  Option<shared.Grade> get grade => domainStock.grade;
+  Option<shared.Grade> get grade => stock.grade;
 
-  /// Creates a new ServerStock instance with validation.
+  /// Creates a new StockPersistenceModel instance with validation.
   ///
-  /// This factory method maintains backward compatibility with the original
-  /// Stock.create API while using the shared domain Stock internally.
-  static Either<StockError, ServerStock> create({
+  /// This factory method handles infrastructure validation (ID, timestamps)
+  /// and wraps the domain Stock entity.
+  static Either<PersistenceError, StockPersistenceModel> create({
     required String id,
     required shared.TickerSymbol ticker,
     required DateTime createdAt,
@@ -56,43 +56,43 @@ class ServerStock extends Equatable {
   }) {
     // Validate ID is not empty
     if (id.isEmpty) {
-      return left(StockInvalidId(id));
+      return left(InvalidStockId(id));
     }
 
     // Validate ID is a valid UUID
     if (!Uuid.isValidUUID(fromString: id)) {
-      return left(StockInvalidId(id));
+      return left(InvalidStockId(id));
     }
 
     // Validate timestamps
     if (createdAt.isAfter(updatedAt)) {
-      return left(StockInvalidTimestamps(
+      return left(InvalidStockTimestamps(
         createdAt: createdAt,
         updatedAt: updatedAt,
       ));
     }
 
     // Create the shared domain stock
-    final domainStockResult = shared.Stock.create(
+    final stockResult = shared.Stock.create(
       ticker: ticker,
       name: name,
       sicCode: sicCode,
       grade: grade,
     );
 
-    // Convert shared stock errors to server stock errors if needed
-    return domainStockResult.fold(
+    // Convert shared stock errors to infrastructure errors if needed
+    return stockResult.fold(
       // coverage:ignore-start
       (sharedError) {
         // The shared Stock.create currently doesn't return errors,
         // but if it did in the future, we'd map them here
-        return left(StockInvalidId(id)); // Placeholder
+        return left(InvalidStockId(id)); // Placeholder
       },
       // coverage:ignore-end
-      (domainStock) => right(
-        ServerStock._(
+      (stock) => right(
+        StockPersistenceModel._(
           id: id,
-          domainStock: domainStock,
+          stock: stock,
           createdAt: createdAt,
           updatedAt: updatedAt,
         ),
@@ -101,7 +101,7 @@ class ServerStock extends Equatable {
   }
 
   /// Creates a copy of this stock with the given fields replaced.
-  ServerStock copyWith({
+  StockPersistenceModel copyWith({
     shared.TickerSymbol? ticker,
     Option<shared.CompanyName>? name,
     Option<shared.SicCode>? sicCode,
@@ -118,19 +118,19 @@ class ServerStock extends Equatable {
     }
 
     // Create new domain stock if any domain fields changed
-    final newDomainStock =
+    final newStock =
         (ticker != null || name != null || sicCode != null || grade != null)
-            ? domainStock.copyWith(
+            ? stock.copyWith(
                 ticker: ticker,
                 name: name,
                 sicCode: sicCode,
                 grade: grade,
               )
-            : domainStock;
+            : stock;
 
-    return ServerStock._(
+    return StockPersistenceModel._(
       id: id,
-      domainStock: newDomainStock,
+      stock: newStock,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -140,9 +140,6 @@ class ServerStock extends Equatable {
   List<Object?> get props => [id];
 
   @override
-  String toString() => 'Stock(id: $id, ticker: ${ticker.value})';
+  String toString() =>
+      'StockPersistenceModel(id: $id, ticker: ${ticker.value})';
 }
-
-/// Type alias for backward compatibility.
-/// This allows existing code to use 'Stock' while we transition.
-typedef Stock = ServerStock;

@@ -2,9 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:serverpod/serverpod.dart';
 import 'package:test/test.dart';
-import 'package:zenvestor_domain/zenvestor_domain.dart'
-    show CompanyName, Grade, SicCode, TickerSymbol;
-import 'package:zenvestor_server/src/domain/stock/stock.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
 import 'package:zenvestor_server/src/generated/infrastructure/stock/stock_model.dart'
     as serverpod_model;
 import 'package:zenvestor_server/src/infrastructure/stock/repositories/stock_repository_serverpod.dart';
@@ -22,7 +20,6 @@ void main() {
   group('StockRepositoryServerpod', () {
     late MockSession mockSession;
     late StockRepositoryServerpod repository;
-    const uuid = Uuid();
 
     setUpAll(() {
       registerFallbackValue(LogLevel.info);
@@ -36,19 +33,16 @@ void main() {
     group('add', () {
       test('should successfully add a new stock', () async {
         // Arrange
-        final tickerEither = TickerSymbol.create('AAPL');
-        final companyNameEither = CompanyName.create('Apple Inc.');
-        final sicCodeEither = SicCode.create('3571');
-        final gradeEither = Grade.create('A');
+        final tickerEither = shared.TickerSymbol.create('AAPL');
+        final companyNameEither = shared.CompanyName.create('Apple Inc.');
+        final sicCodeEither = shared.SicCode.create('3571');
+        final gradeEither = shared.Grade.create('A');
 
-        final stockEither = Stock.create(
-          id: uuid.v4(),
+        final stockEither = shared.Stock.create(
           ticker: tickerEither.getOrElse((l) => throw Exception()),
           name: Some(companyNameEither.getOrElse((l) => throw Exception())),
           sicCode: Some(sicCodeEither.getOrElse((l) => throw Exception())),
           grade: Some(gradeEither.getOrElse((l) => throw Exception())),
-          createdAt: DateTime(2024, 1, 15),
-          updatedAt: DateTime(2024, 1, 20),
         );
 
         // Note: Since we can't easily mock Serverpod's static db methods,
