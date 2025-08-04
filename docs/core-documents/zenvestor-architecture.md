@@ -26,16 +26,17 @@ We will use Serverpod's project initialization tool which provides:
 
 ### Technical Summary
 
-Zenvestor implements a Clean Architecture approach using Dart across the full stack. The system uses Serverpod for backend API development with auto-generated type-safe client code, Flutter with Bloc for state management on the frontend, and PostgreSQL for data persistence. The architecture prioritizes maintainability through strict layer separation while leveraging the unique strengths of Serverpod's code generation and Bloc's reactive patterns to create a sophisticated yet manageable trading platform.
+Zenvestor implements a Clean Architecture approach using Dart across the full stack with a shared domain package. The system uses Serverpod for backend API development with auto-generated type-safe client code, Flutter with Bloc for state management on the frontend, and PostgreSQL for data persistence. The architecture features a framework-agnostic shared domain package containing business logic that is reused between server and Flutter applications. This approach prioritizes maintainability through strict layer separation and code reuse while leveraging the unique strengths of Serverpod's code generation and Bloc's reactive patterns to create a sophisticated yet manageable trading platform.
 
 ### High Level Overview
 
 The architecture follows these key decisions from the PRD:
-1. **Monorepo Structure**: Single repository containing server, client, and Flutter applications
-2. **Service Architecture**: Client-server architecture with clear API boundaries
-3. **Clean Architecture**: Strict separation of concerns across all layers
-4. **Reactive State Management**: Bloc pattern for predictable state updates
-5. **Code Generation**: Serverpod's auto-generated client for type safety
+1. **Monorepo Structure**: Single repository containing server, client, Flutter applications, and shared packages
+2. **Shared Domain Package**: Framework-agnostic business logic shared between server and Flutter
+3. **Service Architecture**: Client-server architecture with clear API boundaries
+4. **Clean Architecture**: Strict separation of concerns across all layers
+5. **Reactive State Management**: Bloc pattern for predictable state updates
+6. **Code Generation**: Serverpod's auto-generated client for type safety
 
 ### High Level Project Diagram
 
@@ -47,6 +48,10 @@ graph TB
         REPO[Repository Layer<br/>Data Abstraction]
     end
     
+    subgraph "Shared Package"
+        SHARED[Shared Domain<br/>Entities, Value Objects,<br/>Business Logic]
+    end
+    
     subgraph "Auto-Generated"
         CLIENT[Serverpod Client<br/>Type-safe API Client]
     end
@@ -54,7 +59,7 @@ graph TB
     subgraph "Server Layer"
         API[API Endpoints<br/>Serverpod]
         APP[Application Layer<br/>Use Cases]
-        DOMAIN[Domain Layer<br/>Entities & Logic]
+        SDOMAIN[Server Domain<br/>Wrappers & Infrastructure]
         INFRA[Infrastructure Layer<br/>Data Access]
     end
     
@@ -66,10 +71,12 @@ graph TB
     
     UI --> BLOC
     BLOC --> REPO
+    BLOC -.->|Uses| SHARED
     REPO --> CLIENT
     CLIENT -.->|HTTP/WebSocket| API
     API --> APP
-    APP --> DOMAIN
+    APP --> SDOMAIN
+    SDOMAIN -.->|Extends| SHARED
     APP --> INFRA
     INFRA --> DB
     INFRA --> ALPACA
@@ -79,7 +86,9 @@ graph TB
 ### Architectural and Design Patterns
 
 - **Clean Architecture:** Concentric layers with dependency rule pointing inward - _Rationale:_ Ensures business logic remains independent of frameworks and external services
+- **Shared Domain Package:** Framework-agnostic domain logic - _Rationale:_ Reuse business logic between server and Flutter, maintain single source of truth
 - **Repository Pattern:** Abstract data sources from business logic - _Rationale:_ Allows switching between local cache, remote API, or mock data without affecting business logic
+- **Wrapper Pattern:** Server entities wrap shared domain - _Rationale:_ Add infrastructure concerns without polluting shared domain
 - **Bloc Pattern:** Reactive state management with clear event/state separation - _Rationale:_ Predictable state updates, testability, and clear separation of UI from business logic
 - **Dependency Injection:** Constructor injection for all dependencies - _Rationale:_ Enables testing and maintains loose coupling between layers
 - **Code Generation:** Serverpod client/server code generation - _Rationale:_ Type safety across client-server boundary, reduced boilerplate
@@ -101,6 +110,7 @@ This is the DEFINITIVE technology selection section. Based on our technical deci
 | Category | Technology | Version | Purpose | Rationale |
 |----------|------------|---------|---------|-----------|
 | **Language** | Dart | 3.2.0 | Full-stack development language | Consistent language across entire stack, strong typing |
+| **Shared Domain** | zenvestor_domain | 0.1.0 | Shared business logic package | Framework-agnostic domain logic, single source of truth |
 | **Backend Framework** | Serverpod | 1.2.0 | Backend framework with code generation | Auto-generated client, WebSocket support, built-in auth |
 | **Frontend Framework** | Flutter | 3.16.0 | Cross-platform UI framework | Native performance, hot reload, rich widget library |
 | **State Management** | flutter_bloc | 8.1.3 | Reactive state management | Clear separation of concerns, predictable state updates |
@@ -111,6 +121,7 @@ This is the DEFINITIVE technology selection section. Based on our technical deci
 | **Testing Frontend** | flutter_test | SDK | Flutter testing framework | Widget and integration testing |
 | **Linting** | very_good_analysis | 5.1.0 | Dart/Flutter linting | Enforces consistent code style |
 | **Code Generation** | build_runner | 2.4.0 | Code generation runner | Required for Serverpod |
+| **Functional Programming** | fpdart | 1.1.0 | Functional programming utilities | Either types for error handling |
 | **Logging** | logging | 1.2.0 | Structured logging | Simple, effective logging |
 | **HTTP Client** | http | 1.1.0 | HTTP requests | For external API calls |
 | **WebSocket** | Built-in | - | Real-time updates | Serverpod WebSocket support |
@@ -224,6 +235,21 @@ This is the DEFINITIVE technology selection section. Based on our technical deci
 
 ## Components
 
+### Shared Domain Package
+
+**Shared Domain Layer**
+**Responsibility:** Framework-agnostic business logic, value objects, validation
+
+**Key Interfaces:**
+- Stock entity with business rules
+- Value objects (TickerSymbol, CompanyName, SicCode, Grade)
+- Domain-specific exceptions and error types
+- Validation logic reused across server and Flutter
+
+**Dependencies:** None (framework-agnostic)
+
+**Technology Stack:** Pure Dart classes, fpdart for functional error handling
+
 ### Serverpod Backend Components
 
 **API Layer**
@@ -247,21 +273,21 @@ This is the DEFINITIVE technology selection section. Based on our technical deci
 - CalculatePortfolioMetricsUseCase
 - SyncAlpacaDataUseCase
 
-**Dependencies:** Domain Layer, Infrastructure Layer
+**Dependencies:** Server Domain Layer, Infrastructure Layer, Shared Domain
 
 **Technology Stack:** Pure Dart classes
 
-**Domain Layer**
-**Responsibility:** Core business rules, entities, domain services
+**Server Domain Layer**
+**Responsibility:** Server-specific domain extensions, infrastructure concerns
 
 **Key Interfaces:**
-- TargetEntity with lot calculation logic
-- PortfolioEntity with risk validation
-- TradingService with execution rules
+- ServerStock wrapping shared Stock with ID and timestamps
+- Repository interfaces for persistence
+- Server-specific domain services
 
-**Dependencies:** None (pure business logic)
+**Dependencies:** Shared Domain Package
 
-**Technology Stack:** Pure Dart classes
+**Technology Stack:** Pure Dart classes extending shared domain
 
 **Infrastructure Layer**
 **Responsibility:** External service integration, data persistence
@@ -336,6 +362,10 @@ C4Container
 
     Person(trader, "Trader", "CAN SLIM practitioner")
     
+    Container_Boundary(shared, "Shared Package") {
+        Container(shared_domain, "Shared Domain", "Dart", "Framework-agnostic business logic")
+    }
+    
     Container_Boundary(mobile, "Mobile Application") {
         Container(flutter_app, "Flutter App", "Dart, Flutter", "Trading interface")
         Container(bloc_layer, "Bloc Layer", "flutter_bloc", "State management")
@@ -345,7 +375,7 @@ C4Container
     Container_Boundary(backend, "Backend Services") {
         Container(api, "API Server", "Serverpod", "REST/WebSocket APIs")
         Container(app_services, "Application Services", "Dart", "Business logic")
-        Container(domain, "Domain", "Dart", "Core business rules")
+        Container(server_domain, "Server Domain", "Dart", "Infrastructure wrappers")
     }
     
     ContainerDb(postgres, "PostgreSQL", "PostgreSQL 15", "Stores all trading data")
@@ -357,9 +387,11 @@ C4Container
     Rel(trader, flutter_app, "Uses")
     Rel(flutter_app, bloc_layer, "Updates")
     Rel(bloc_layer, repo_layer, "Fetches data")
+    Rel(bloc_layer, shared_domain, "Uses")
     Rel(repo_layer, api, "Calls", "HTTPS/WSS")
     Rel(api, app_services, "Delegates")
-    Rel(app_services, domain, "Uses")
+    Rel(app_services, server_domain, "Uses")
+    Rel(server_domain, shared_domain, "Extends")
     Rel(app_services, postgres, "Reads/Writes")
     Rel(app_services, redis, "Caches")
     Rel(app_services, alpaca, "Executes trades")
@@ -767,6 +799,24 @@ CREATE TABLE market_data (
 
 ```plaintext
 zenvestor/
+├── packages/
+│   └── zenvestor_domain/          # Shared domain package
+│       ├── lib/
+│       │   ├── src/
+│       │   │   ├── shared/        # Cross-cutting concerns
+│       │   │   │   └── errors/    # Domain exceptions
+│       │   │   └── stock/         # Stock aggregate
+│       │   │       ├── stock.dart
+│       │   │       ├── stock_errors.dart
+│       │   │       └── value_objects/
+│       │   │           ├── ticker_symbol.dart
+│       │   │           ├── company_name.dart
+│       │   │           ├── sic_code.dart
+│       │   │           └── grade.dart
+│       │   └── zenvestor_domain.dart  # Package exports
+│       ├── test/
+│       └── pubspec.yaml
+│
 ├── zenvestor_server/               # Serverpod backend
 │   ├── lib/
 │   │   ├── src/
@@ -782,15 +832,18 @@ zenvestor/
 │   │   │   │   ├── portfolio/
 │   │   │   │   ├── trading/
 │   │   │   │   └── market_data/
-│   │   │   ├── domain/            # Business logic
-│   │   │   │   ├── entities/
-│   │   │   │   ├── repositories/
-│   │   │   │   ├── services/
-│   │   │   │   └── value_objects/
+│   │   │   ├── domain/            # Server-specific domain
+│   │   │   │   ├── stock/
+│   │   │   │   │   ├── stock.yaml
+│   │   │   │   │   ├── server_stock.dart
+│   │   │   │   │   └── repository.dart
+│   │   │   │   ├── portfolio/
+│   │   │   │   └── target/
 │   │   │   ├── infrastructure/    # External services
 │   │   │   │   ├── alpaca/
 │   │   │   │   ├── cache/
 │   │   │   │   ├── database/
+│   │   │   │   ├── mappers/       # Protocol to domain mapping
 │   │   │   │   └── websocket/
 │   │   │   └── config/            # Configuration
 │   │   └── server.dart            # Server entry point
@@ -817,8 +870,7 @@ zenvestor/
 │   │   │   │   ├── portfolio/
 │   │   │   │   ├── trading/
 │   │   │   │   └── market_data/
-│   │   │   ├── domain/           # Business logic
-│   │   │   │   ├── entities/
+│   │   │   ├── domain/           # Flutter-specific domain
 │   │   │   │   ├── repositories/
 │   │   │   │   └── failures/
 │   │   │   ├── infrastructure/   # Data layer
@@ -834,12 +886,6 @@ zenvestor/
 │   ├── integration_test/
 │   └── pubspec.yaml
 │
-├── zenvestor_cli/                 # CLI tool
-│   ├── bin/
-│   │   └── zenvestor.dart
-│   ├── lib/
-│   └── pubspec.yaml
-│
 ├── scripts/                       # Development scripts
 │   ├── setup.sh
 │   ├── generate.sh
@@ -850,9 +896,12 @@ zenvestor/
 │   └── docker-compose.yaml
 │
 ├── docs/                          # Documentation
-│   ├── prd.md
-│   ├── architecture.md
-│   └── stories/
+│   ├── core-documents/
+│   │   ├── zenvestor-architecture.md
+│   │   └── zenvestor-prd.md
+│   └── development-guides/
+│       ├── ARCHITECTURE_GUIDE.md
+│       └── TEST_WRITING_GUIDE.md
 │
 └── README.md
 ```
@@ -943,9 +992,12 @@ Production Environment
 
 ### Critical Rules
 - **Clean Architecture:** Never import infrastructure in domain layer
-- **Serverpod Models:** All database models must be defined in protocol.yaml
+- **Shared Domain:** Keep shared domain package framework-agnostic (no Serverpod/Flutter dependencies)
+- **Import Aliases:** Always use namespace aliases when importing shared domain (e.g., `as shared`)
+- **Serverpod Models:** All database models must be defined in YAML files
+- **Server Wrappers:** Use wrapper pattern to add infrastructure concerns to shared domain
 - **Bloc Pattern:** All Blocs must extend Bloc<Event, State> with immutable events/states
-- **Error Handling:** Never use try-catch without specific exception types
+- **Error Handling:** Use Either types for domain errors, never use try-catch without specific exception types
 - **Async/Await:** Always use async/await instead of raw Futures
 - **Null Safety:** Leverage Dart's null safety - avoid late and ! unless necessary
 - **Repository Pattern:** All external data access through repository interfaces

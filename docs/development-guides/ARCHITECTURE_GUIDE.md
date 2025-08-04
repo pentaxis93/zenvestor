@@ -6,21 +6,23 @@ This guide defines the architecture for Zenvestor built with Serverpod, Flutter,
 
 ## Architecture Philosophy
 
-### Serverpod-Optimized Clean Architecture
+### Serverpod-Optimized Clean Architecture with Shared Domain
 
-Our approach recognizes that Serverpod's code generation handles many traditional clean architecture concerns automatically:
+Our approach combines Serverpod's code generation with a shared domain package that maintains framework independence:
 
-1. **YAML files define domain structure** - Part of the domain layer, not infrastructure
-2. **Generated code provides automatic DTOs and contracts** - No manual DTO creation needed
-3. **Domain entities add behavior and business logic** - Complementing the structural definitions
-4. **Repository interfaces abstract persistence** - Maintaining domain independence
+1. **Shared domain package** - Framework-agnostic business logic shared between server and Flutter
+2. **YAML files define infrastructure structure** - Serverpod-specific persistence models
+3. **Generated code provides automatic DTOs and contracts** - No manual DTO creation needed
+4. **Server domain entities extend shared domain** - Adding infrastructure concerns via wrapper pattern
+5. **Repository interfaces abstract persistence** - Maintaining domain independence
 
 ### Key Principles
 
-- **Domain Independence**: Business logic remains independent of infrastructure
+- **Domain Independence**: Business logic remains independent of infrastructure via shared domain package
 - **Code Generation as Architecture**: Generated code replaces manual boilerplate
+- **Framework Agnostic Core**: Shared domain has no Serverpod or Flutter dependencies
 - **Simplified Layers**: Fewer translation layers needed due to automatic code generation
-- **Managed Redundancy**: Accept minimal redundancy between YAML and domain entities
+- **Clean Separation**: Infrastructure concerns isolated in server-specific wrappers
 
 ### What Serverpod Handles Automatically
 
@@ -40,10 +42,12 @@ This allows us to focus on business logic rather than plumbing code.
 
 ## Project Structure
 
-Serverpod creates three top-level directories for our project:
+Our project uses a four-part structure with a shared domain package:
 
 ```
 zenvestor/
+├── packages/
+│   └── zenvestor_domain/  # Shared domain logic (framework-agnostic)
 ├── zenvestor_server/      # Backend server application
 ├── zenvestor_client/      # Generated client protocol (don't modify)
 └── zenvestor_flutter/     # Flutter application
@@ -52,26 +56,34 @@ zenvestor/
 ### Directory Structure
 
 ```
+packages/
+└── zenvestor_domain/               # Shared domain package
+    ├── lib/
+    │   ├── src/
+    │   │   ├── shared/             # Cross-cutting concerns
+    │   │   │   └── errors/         # Domain errors and validation
+    │   │   └── stock/              # Stock aggregate
+    │   │       ├── stock.dart      # Core entity
+    │   │       ├── stock_errors.dart
+    │   │       └── value_objects/
+    │   │           ├── ticker_symbol.dart
+    │   │           ├── company_name.dart
+    │   │           ├── sic_code.dart
+    │   │           └── grade.dart
+    │   └── zenvestor_domain.dart  # Package exports
+    └── test/
+
 zenvestor_server/
 ├── config/                          # Serverpod configuration
 ├── generated/                       # Auto-generated code (don't edit)
 ├── lib/
 │   ├── src/
-│   │   ├── domain/                 # Domain layer
-│   │   │   ├── stock/              # Stock aggregate
-│   │   │   │   ├── stock.yaml      # Structure definition
-│   │   │   │   ├── stock.dart      # Behavior & logic
-│   │   │   │   ├── value_objects/
-│   │   │   │   │   ├── stock_symbol.dart
-│   │   │   │   │   ├── company_name.dart
-│   │   │   │   │   ├── sector.dart
-│   │   │   │   │   ├── industry_group.dart
-│   │   │   │   │   ├── grade.dart
-│   │   │   │   │   └── notes.dart
+│   │   ├── domain/                 # Server-specific domain extensions
+│   │   │   ├── stock/              
+│   │   │   │   ├── stock.yaml      # Serverpod structure definition
+│   │   │   │   ├── server_stock.dart # Server wrapper with infrastructure
 │   │   │   │   └── repository.dart  # Repository interface
-│   │   │   ├── portfolio/          # Portfolio aggregate
-│   │   │   └── exceptions/
-│   │   │       └── exceptions.dart
+│   │   │   └── portfolio/          # Portfolio aggregate
 │   │   ├── application/            # Use cases & orchestration
 │   │   │   ├── use_cases/
 │   │   │   │   └── stock/
@@ -129,14 +141,22 @@ zenvestor_flutter/
 └── test/
 ```
 
-## Understanding Serverpod's Three-Project Structure
+## Understanding the Four-Part Structure
+
+### packages/zenvestor_domain
+**Shared domain logic** - framework-agnostic business rules:
+- Core domain entities and value objects
+- Business validation and error types
+- No dependencies on Serverpod or Flutter
+- Used by both server and Flutter projects
 
 ### zenvestor_server
 Contains all backend logic including:
-- Domain models and business rules
+- Server-specific domain wrappers (extending shared domain)
 - Use cases and application services
 - API endpoints
 - Database access through Serverpod
+- Infrastructure concerns (IDs, timestamps)
 
 ### zenvestor_client
 **Generated code only** - do not add custom code here:
@@ -150,10 +170,107 @@ The Flutter application with all UI and client-side logic:
 - Client-side application services
 - API client implementations
 - State management
+- Can import shared domain for type safety
 
 ## Layer-by-Layer Implementation
 
-### 1. Domain Layer (zenvestor_server)
+### 1. Shared Domain Layer (packages/zenvestor_domain)
+
+#### Core Domain Entity
+**File:** `packages/zenvestor_domain/lib/src/stock/stock.dart`
+
+```dart
+import 'package:equatable/equatable.dart';
+import 'value_objects/ticker_symbol.dart';
+import 'value_objects/company_name.dart';
+import 'value_objects/sic_code.dart';
+import 'value_objects/grade.dart';
+
+/// Framework-agnostic domain entity representing a stock.
+/// Contains only business logic and validation, no infrastructure concerns.
+class Stock extends Equatable {
+  final TickerSymbol tickerSymbol;
+  final CompanyName companyName;
+  final SicCode? primarySicCode;
+  final SicCode? secondarySicCode;
+  final Grade? grade;
+
+  const Stock({
+    required this.tickerSymbol,
+    required this.companyName,
+    this.primarySicCode,
+    this.secondarySicCode,
+    this.grade,
+  });
+
+  /// Business logic for validation
+  factory Stock.create({
+    required String ticker,
+    required String name,
+    String? primarySic,
+    String? secondarySic,
+    String? grade,
+  }) {
+    return Stock(
+      tickerSymbol: TickerSymbol(ticker),
+      companyName: CompanyName(name),
+      primarySicCode: primarySic != null ? SicCode(primarySic) : null,
+      secondarySicCode: secondarySic != null ? SicCode(secondarySic) : null,
+      grade: grade != null ? Grade(grade) : null,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    tickerSymbol,
+    companyName,
+    primarySicCode,
+    secondarySicCode,
+    grade,
+  ];
+}
+```
+
+#### Shared Value Objects
+**File:** `packages/zenvestor_domain/lib/src/stock/value_objects/ticker_symbol.dart`
+
+```dart
+import 'package:zenvestor_domain/shared/errors.dart';
+
+class TickerSymbol {
+  final String value;
+
+  factory TickerSymbol(String input) {
+    final trimmed = input.trim().toUpperCase();
+    
+    if (trimmed.isEmpty || trimmed.length > 5) {
+      throw ValidationException.invalidLength(
+        field: 'ticker symbol',
+        min: 1,
+        max: 5,
+        actual: trimmed.length,
+      );
+    }
+    
+    if (!RegExp(r'^[A-Z]+$').hasMatch(trimmed)) {
+      throw ValidationException.invalidFormat(
+        field: 'ticker symbol',
+        expected: 'letters only',
+        actual: trimmed,
+      );
+    }
+    
+    return TickerSymbol._(trimmed);
+  }
+  
+  const TickerSymbol._(this.value);
+  
+  @override
+  String toString() => value;
+}
+```
+
+### 2. Server Domain Layer (zenvestor_server)
 
 #### YAML Structure Definition
 **File:** `zenvestor_server/lib/src/domain/stock/stock.yaml`
@@ -163,11 +280,10 @@ class: Stock
 table: stocks
 fields:
   symbol: String
-  companyName: String?
-  sector: String?
-  industryGroup: String?
+  companyName: String
+  primarySicCode: String?
+  secondarySicCode: String?
   grade: String?
-  notes: String
   createdAt: DateTime
   updatedAt: DateTime
 indexes:
@@ -178,377 +294,100 @@ indexes:
 
 > **Note**: For comprehensive model definition options including relations, indices, and advanced features, see `/docs/serverpod-docs/06-concepts/02-models.md` and `/docs/serverpod-docs/06-concepts/06-database/02-models.md`
 
-**Note on Redundancy**: This YAML file defines the structure that will also appear in the domain entity below. This redundancy is unavoidable but manageable by keeping these files together.
-
-#### Domain Entity
-**File:** `zenvestor_server/lib/src/domain/stock/stock.dart`
+#### Server Domain Wrapper
+**File:** `zenvestor_server/lib/src/domain/stock/server_stock.dart`
 
 ```dart
-import 'package:equatable/equatable.dart';
-import 'value_objects/stock_symbol.dart';
-import 'value_objects/company_name.dart';
-import 'value_objects/sector.dart';
-import 'value_objects/industry_group.dart';
-import 'value_objects/grade.dart';
-import 'value_objects/notes.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
 
-/// Rich domain entity representing a stock/security.
-/// Encapsulates business logic for stock operations including
-/// validation, calculations, and state management.
-///
-/// Note: Field definitions mirror stock.yaml - keep synchronized
-class Stock extends Equatable {
-  final String id;
-  final StockSymbol symbol;
-  final CompanyName? companyName;
-  final Sector? sector;
-  final IndustryGroup? industryGroup;
-  final Grade? grade;
-  final Notes notes;
+/// Server-specific stock entity that wraps the shared domain Stock.
+/// Adds infrastructure concerns like database ID and timestamps.
+class ServerStock extends shared.Stock {
+  final int id;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  const Stock({
+  ServerStock({
     required this.id,
-    required this.symbol,
-    this.companyName,
-    this.sector,
-    this.industryGroup,
-    this.grade,
-    required this.notes,
     required this.createdAt,
     required this.updatedAt,
-  });
+    required shared.TickerSymbol tickerSymbol,
+    required shared.CompanyName companyName,
+    shared.SicCode? primarySicCode,
+    shared.SicCode? secondarySicCode,
+    shared.Grade? grade,
+  }) : super(
+    tickerSymbol: tickerSymbol,
+    companyName: companyName,
+    primarySicCode: primarySicCode,
+    secondarySicCode: secondarySicCode,
+    grade: grade,
+  );
 
-  /// Builder pattern for elegant construction
-  factory Stock.builder({
-    String? id,
-    required StockSymbol symbol,
-    CompanyName? companyName,
-    Sector? sector,
-    IndustryGroup? industryGroup,
-    Grade? grade,
-    Notes? notes,
+  /// Create from shared domain entity with infrastructure data
+  factory ServerStock.fromDomain({
+    required shared.Stock stock,
+    required int id,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
-    // Validate sector-industry combination
-    if (industryGroup != null && sector == null) {
-      throw ArgumentError('Sector must be provided when industry group is specified');
-    }
-
-    // Validate industry group belongs to sector
-    if (industryGroup != null && sector != null) {
-      industryGroup.validateSector(sector);
-    }
-
     final now = DateTime.now();
-    return Stock(
-      id: id ?? '',
-      symbol: symbol,
-      companyName: companyName,
-      sector: sector,
-      industryGroup: industryGroup,
-      grade: grade,
-      notes: notes ?? const Notes(''),
+    return ServerStock(
+      id: id,
       createdAt: createdAt ?? now,
       updatedAt: updatedAt ?? now,
+      tickerSymbol: stock.tickerSymbol,
+      companyName: stock.companyName,
+      primarySicCode: stock.primarySicCode,
+      secondarySicCode: stock.secondarySicCode,
+      grade: stock.grade,
     );
   }
 
-  /// String representation for display
-  @override
-  String toString() {
-    if (companyName != null) {
-      return '${symbol.value} - ${companyName!.value}';
-    }
-    return symbol.value;
-  }
-
-  /// Check if stock has notes
-  bool get hasNotes => notes.hasContent;
-
-  /// Update multiple fields at once with validation
-  Stock updateFields({
-    StockSymbol? symbol,
-    CompanyName? companyName,
-    Sector? sector,
-    IndustryGroup? industryGroup,
-    Grade? grade,
-    Notes? notes,
-  }) {
-    // Handle sector-industry domain logic
-    IndustryGroup? newIndustryGroup = industryGroup ?? this.industryGroup;
-    Sector? newSector = sector ?? this.sector;
-
-    // If changing sector and not explicitly changing industry group
-    if (sector != null && industryGroup == null && this.industryGroup != null) {
-      // Check if current industry group is compatible with new sector
-      try {
-        this.industryGroup!.validateSector(sector);
-      } catch (_) {
-        // Invalid combination, clear industry group
-        newIndustryGroup = null;
-      }
-    }
-
-    // Validate final combination
-    if (newIndustryGroup != null && newSector == null) {
-      throw ArgumentError('Sector must be provided when industry group is specified');
-    }
-
-    if (newIndustryGroup != null && newSector != null) {
-      newIndustryGroup.validateSector(newSector);
-    }
-
-    return Stock(
-      id: id,
-      symbol: symbol ?? this.symbol,
-      companyName: companyName ?? this.companyName,
-      sector: newSector,
-      industryGroup: newIndustryGroup,
-      grade: grade ?? this.grade,
-      notes: notes ?? this.notes,
-      createdAt: createdAt,
-      updatedAt: DateTime.now(),
-    );
-  }
+  /// Extract the shared domain entity (without infrastructure concerns)
+  shared.Stock toDomain() => shared.Stock(
+    tickerSymbol: tickerSymbol,
+    companyName: companyName,
+    primarySicCode: primarySicCode,
+    secondarySicCode: secondarySicCode,
+    grade: grade,
+  );
 
   @override
   List<Object?> get props => [
+    ...super.props,
     id,
-    symbol,
-    companyName,
-    sector,
-    industryGroup,
-    grade,
-    notes,
     createdAt,
     updatedAt,
   ];
 }
 ```
 
-#### Value Objects
-
-**File:** `zenvestor_server/lib/src/domain/stock/value_objects/stock_symbol.dart`
-
-```dart
-import '../../exceptions/exceptions.dart';
-
-class StockSymbol {
-  final String value;
-
-  factory StockSymbol(String input) {
-    final trimmed = input.trim().toUpperCase();
-
-    if (trimmed.isEmpty || trimmed.length > 5) {
-      throw InvalidStockSymbolException(
-        'Stock symbol must be 1-5 characters'
-      );
-    }
-
-    if (!RegExp(r'^[A-Z]+$').hasMatch(trimmed)) {
-      throw InvalidStockSymbolException(
-        'Stock symbol must contain only letters'
-      );
-    }
-
-    return StockSymbol._(trimmed);
-  }
-
-  const StockSymbol._(this.value);
-
-  @override
-  String toString() => value;
-
-  @override
-  bool operator ==(Object other) =>
-    identical(this, other) ||
-    other is StockSymbol && other.value == value;
-
-  @override
-  int get hashCode => value.hashCode;
-}
-```
-
-**File:** `zenvestor_server/lib/src/domain/stock/value_objects/sector.dart`
-
-```dart
-class Sector {
-  static const _validSectors = {
-    'Technology',
-    'Healthcare',
-    'Financial Services',
-    'Consumer Discretionary',
-    'Communication Services',
-    'Industrials',
-    'Consumer Staples',
-    'Energy',
-    'Utilities',
-    'Real Estate',
-    'Materials',
-  };
-
-  final String value;
-
-  factory Sector(String input) {
-    final trimmed = input.trim();
-
-    if (!_validSectors.contains(trimmed)) {
-      throw InvalidSectorException(
-        'Invalid sector: $trimmed. Must be one of: ${_validSectors.join(', ')}'
-      );
-    }
-
-    return Sector._(trimmed);
-  }
-
-  const Sector._(this.value);
-
-  static Set<String> get validSectors => Set.unmodifiable(_validSectors);
-}
-```
-
-**File:** `zenvestor_server/lib/src/domain/stock/value_objects/industry_group.dart`
-
-```dart
-class IndustryGroup {
-  // Map of sectors to their valid industry groups
-  static const _sectorIndustryGroups = {
-    'Technology': {
-      'Software',
-      'Hardware',
-      'Semiconductors',
-      'IT Services',
-    },
-    'Healthcare': {
-      'Pharmaceuticals',
-      'Biotechnology',
-      'Medical Devices',
-      'Healthcare Services',
-    },
-    // ... other sectors
-  };
-
-  final String value;
-
-  factory IndustryGroup(String input, {String? sector}) {
-    final trimmed = input.trim();
-
-    if (trimmed.isEmpty) {
-      throw InvalidIndustryGroupException('Industry group cannot be empty');
-    }
-
-    // If sector is provided, validate the combination
-    if (sector != null) {
-      final validGroups = _sectorIndustryGroups[sector];
-      if (validGroups == null || !validGroups.contains(trimmed)) {
-        throw InvalidIndustryGroupException(
-          'Invalid industry group "$trimmed" for sector "$sector"'
-        );
-      }
-    }
-
-    return IndustryGroup._(trimmed);
-  }
-
-  const IndustryGroup._(this.value);
-
-  /// Validate that this industry group is valid for the given sector
-  void validateSector(Sector sector) {
-    final validGroups = _sectorIndustryGroups[sector.value];
-    if (validGroups == null || !validGroups.contains(value)) {
-      throw InvalidIndustryGroupException(
-        'Industry group "$value" is not valid for sector "${sector.value}"'
-      );
-    }
-  }
-}
-```
-
-**File:** `zenvestor_server/lib/src/domain/stock/value_objects/grade.dart`
-
-```dart
-class Grade {
-  static const _validGrades = {'A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F'};
-
-  final String value;
-
-  factory Grade(String input) {
-    final trimmed = input.trim().toUpperCase();
-
-    if (!_validGrades.contains(trimmed)) {
-      throw InvalidGradeException(
-        'Invalid grade: $trimmed. Must be one of: ${_validGrades.join(', ')}'
-      );
-    }
-
-    return Grade._(trimmed);
-  }
-
-  const Grade._(this.value);
-
-  /// Get numeric value for comparisons
-  double get numericValue {
-    const gradeValues = {
-      'A+': 4.3, 'A': 4.0, 'A-': 3.7,
-      'B+': 3.3, 'B': 3.0, 'B-': 2.7,
-      'C+': 2.3, 'C': 2.0, 'C-': 1.7,
-      'D': 1.0, 'F': 0.0,
-    };
-    return gradeValues[value] ?? 0.0;
-  }
-
-  bool get isInvestmentGrade => numericValue >= 3.0; // B or higher
-}
-```
-
-**File:** `zenvestor_server/lib/src/domain/stock/value_objects/notes.dart`
-
-```dart
-class Notes {
-  final String value;
-
-  factory Notes(String input) {
-    final trimmed = input.trim();
-
-    if (trimmed.length > 5000) {
-      throw InvalidNotesException('Notes cannot exceed 5000 characters');
-    }
-
-    return Notes._(trimmed);
-  }
-
-  const Notes._(this.value);
-
-  bool get hasContent => value.isNotEmpty;
-
-  int get wordCount => value.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
-}
-```
 
 #### Repository Interface
 **File:** `zenvestor_server/lib/src/domain/stock/repository.dart`
 
 ```dart
 import 'package:dartz/dartz.dart';
-import 'stock.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import 'server_stock.dart';
 import '../exceptions/exceptions.dart';
 
+/// Repository interface uses server-specific domain entities
+/// that include infrastructure concerns like IDs
 abstract class StockRepository {
-  Future<Either<DomainException, Stock>> create(Stock stock);
-  Future<Either<DomainException, Stock>> getById(String id);
-  Future<Either<DomainException, Stock>> getBySymbol(String symbol);
-  Future<Either<DomainException, List<Stock>>> getAll();
-  Future<Either<DomainException, List<Stock>>> getBySector(String sector);
-  Future<Either<DomainException, List<Stock>>> getByGrade(String grade);
-  Future<Either<DomainException, Stock>> update(Stock stock);
-  Future<Either<DomainException, void>> delete(String id);
+  Future<Either<DomainException, ServerStock>> create(shared.Stock stock);
+  Future<Either<DomainException, ServerStock>> getById(int id);
+  Future<Either<DomainException, ServerStock>> getBySymbol(String symbol);
+  Future<Either<DomainException, List<ServerStock>>> getAll();
+  Future<Either<DomainException, List<ServerStock>>> getBySicCode(String sicCode);
+  Future<Either<DomainException, List<ServerStock>>> getByGrade(String grade);
+  Future<Either<DomainException, ServerStock>> update(ServerStock stock);
+  Future<Either<DomainException, void>> delete(int id);
 }
 ```
 
-### 2. Application Layer (zenvestor_server)
+### 3. Application Layer (zenvestor_server)
 
 #### Use Cases
 
@@ -556,14 +395,9 @@ abstract class StockRepository {
 
 ```dart
 import 'package:dartz/dartz.dart';
-import '../../../domain/stock/stock.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import '../../../domain/stock/server_stock.dart';
 import '../../../domain/stock/repository.dart';
-import '../../../domain/stock/value_objects/stock_symbol.dart';
-import '../../../domain/stock/value_objects/company_name.dart';
-import '../../../domain/stock/value_objects/sector.dart';
-import '../../../domain/stock/value_objects/industry_group.dart';
-import '../../../domain/stock/value_objects/grade.dart';
-import '../../../domain/stock/value_objects/notes.dart';
 import '../../../domain/exceptions/exceptions.dart';
 
 class AddStock {
@@ -571,40 +405,33 @@ class AddStock {
 
   AddStock(this._repository);
 
-  Future<Either<DomainException, Stock>> execute({
-    required String symbol,
-    String? companyName,
-    String? sector,
-    String? industryGroup,
+  Future<Either<DomainException, ServerStock>> execute({
+    required String ticker,
+    required String companyName,
+    String? primarySicCode,
+    String? secondarySicCode,
     String? grade,
-    String? notes,
   }) async {
     try {
-      // Create value objects (validation happens here)
-      final stockSymbol = StockSymbol(symbol);
-
-      // Check for duplicates
-      final existingStock = await _repository.getBySymbol(stockSymbol.value);
-      if (existingStock.isRight()) {
-        return Left(DuplicateStockException(stockSymbol.value));
-      }
-
-      // Build the stock entity using builder pattern
-      final stock = Stock.builder(
-        symbol: stockSymbol,
-        companyName: companyName != null ? CompanyName(companyName) : null,
-        sector: sector != null ? Sector(sector) : null,
-        industryGroup: industryGroup != null
-          ? IndustryGroup(industryGroup, sector: sector)
-          : null,
-        grade: grade != null ? Grade(grade) : null,
-        notes: notes != null ? Notes(notes) : null,
+      // Create shared domain entity (validation happens here)
+      final stock = shared.Stock.create(
+        ticker: ticker,
+        name: companyName,
+        primarySic: primarySicCode,
+        secondarySic: secondarySicCode,
+        grade: grade,
       );
 
-      // Persist
+      // Check for duplicates
+      final existingStock = await _repository.getBySymbol(ticker);
+      if (existingStock.isRight()) {
+        return Left(DuplicateStockException(ticker));
+      }
+
+      // Persist using repository (it will handle ServerStock wrapping)
       return await _repository.create(stock);
-    } on DomainException catch (e) {
-      return Left(e);
+    } on shared.DomainException catch (e) {
+      return Left(DomainException(e.message));
     }
   }
 }
@@ -657,52 +484,60 @@ class UpdateStock {
 }
 ```
 
-### 3. Infrastructure Layer (zenvestor_server)
+### 4. Infrastructure Layer (zenvestor_server)
 
 #### Mapper
 **File:** `zenvestor_server/lib/src/infrastructure/mappers/stock_mapper.dart`
 
 ```dart
-import '../../domain/stock/stock.dart';
-import '../../domain/stock/value_objects/stock_symbol.dart';
-import '../../domain/stock/value_objects/company_name.dart';
-import '../../domain/stock/value_objects/sector.dart';
-import '../../domain/stock/value_objects/industry_group.dart';
-import '../../domain/stock/value_objects/grade.dart';
-import '../../domain/stock/value_objects/notes.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import '../../domain/stock/server_stock.dart';
 // Generated code import
-import '../../generated/protocol.dart' as generated;
+import '../../generated/protocol.dart' as protocol;
 
 class StockMapper {
-  /// Maps from generated DTO to domain entity
-  static Stock toDomain(generated.Stock dto) {
-    return Stock(
-      id: dto.id.toString(),
-      symbol: StockSymbol(dto.symbol),
-      companyName: dto.companyName != null ? CompanyName(dto.companyName!) : null,
-      sector: dto.sector != null ? Sector(dto.sector!) : null,
-      industryGroup: dto.industryGroup != null
-        ? IndustryGroup(dto.industryGroup!, sector: dto.sector)
-        : null,
-      grade: dto.grade != null ? Grade(dto.grade!) : null,
-      notes: Notes(dto.notes),
+  /// Maps from generated DTO to server domain entity
+  static ServerStock toDomain(protocol.Stock dto) {
+    return ServerStock(
+      id: dto.id!,
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt,
+      tickerSymbol: shared.TickerSymbol(dto.symbol),
+      companyName: shared.CompanyName(dto.companyName),
+      primarySicCode: dto.primarySicCode != null 
+        ? shared.SicCode(dto.primarySicCode!) 
+        : null,
+      secondarySicCode: dto.secondarySicCode != null
+        ? shared.SicCode(dto.secondarySicCode!)
+        : null,
+      grade: dto.grade != null ? shared.Grade(dto.grade!) : null,
     );
   }
 
-  /// Maps from domain entity to generated DTO
-  static generated.Stock toDto(Stock entity) {
-    return generated.Stock(
-      id: entity.id.isEmpty ? null : int.parse(entity.id),
-      symbol: entity.symbol.value,
-      companyName: entity.companyName?.value,
-      sector: entity.sector?.value,
-      industryGroup: entity.industryGroup?.value,
+  /// Maps from server domain entity to generated DTO
+  static protocol.Stock toDto(ServerStock entity) {
+    return protocol.Stock(
+      id: entity.id,
+      symbol: entity.tickerSymbol.value,
+      companyName: entity.companyName.value,
+      primarySicCode: entity.primarySicCode?.value,
+      secondarySicCode: entity.secondarySicCode?.value,
       grade: entity.grade?.value,
-      notes: entity.notes.value,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+    );
+  }
+
+  /// Maps from shared domain to DTO for creation (no ID yet)
+  static protocol.Stock fromSharedDomain(shared.Stock stock) {
+    return protocol.Stock(
+      symbol: stock.tickerSymbol.value,
+      companyName: stock.companyName.value,
+      primarySicCode: stock.primarySicCode?.value,
+      secondarySicCode: stock.secondarySicCode?.value,
+      grade: stock.grade?.value,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
   }
 }
@@ -714,41 +549,42 @@ class StockMapper {
 ```dart
 import 'package:dartz/dartz.dart';
 import 'package:serverpod/serverpod.dart';
-import '../../domain/stock/stock.dart';
-import '../../domain/stock/repository.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import '../../domain/stock/server_stock.dart';
+import '../../domain/stock/repository.dart' as domain;
 import '../../domain/exceptions/exceptions.dart';
-import '../../generated/protocol.dart' as generated;
+import '../../generated/protocol.dart' as protocol;
 import '../mappers/stock_mapper.dart';
 
-class StockRepository implements domain.StockRepository {
+class StockRepositoryImpl implements domain.StockRepository {
   final Session _session;
 
-  StockRepository(this._session);
+  StockRepositoryImpl(this._session);
 
   @override
-  Future<Either<DomainException, Stock>> create(Stock stock) async {
+  Future<Either<DomainException, ServerStock>> create(shared.Stock stock) async {
     try {
-      // Convert domain entity to generated DTO
-      final dto = StockMapper.toDto(stock);
+      // Convert shared domain to protocol DTO
+      final dto = StockMapper.fromSharedDomain(stock);
 
       // Use Serverpod's generated database operations
       // See /docs/serverpod-docs/06-concepts/06-database/05-crud.md for CRUD operations
-      final savedDto = await generated.Stock.insert(_session, dto);
+      final savedDto = await protocol.Stock.insert(_session, dto);
 
-      // Convert back to domain entity
-      final domainStock = StockMapper.toDomain(savedDto);
-      return Right(domainStock);
+      // Convert back to server domain entity
+      final serverStock = StockMapper.toDomain(savedDto);
+      return Right(serverStock);
     } catch (e) {
       return Left(InfrastructureException('Failed to create stock: $e'));
     }
   }
 
   @override
-  Future<Either<DomainException, Stock>> getBySymbol(String symbol) async {
+  Future<Either<DomainException, ServerStock>> getBySymbol(String symbol) async {
     try {
       // Use Serverpod's generated query methods
       // See /docs/serverpod-docs/06-concepts/06-database/06-filter.md for filtering options
-      final stocks = await generated.Stock.find(
+      final stocks = await protocol.Stock.find(
         _session,
         where: (t) => t.symbol.equals(symbol),
         limit: 1,
@@ -765,32 +601,29 @@ class StockRepository implements domain.StockRepository {
   }
 
   @override
-  Future<Either<DomainException, List<Stock>>> getBySector(String sector) async {
+  Future<Either<DomainException, List<ServerStock>>> getBySicCode(String sicCode) async {
     try {
-      final stocks = await generated.Stock.find(
+      final stocks = await protocol.Stock.find(
         _session,
-        where: (t) => t.sector.equals(sector),
+        where: (t) => t.primarySicCode.equals(sicCode) | 
+                     t.secondarySicCode.equals(sicCode),
       );
 
       final entities = stocks.map(StockMapper.toDomain).toList();
       return Right(entities);
     } catch (e) {
-      return Left(InfrastructureException('Failed to fetch stocks by sector: $e'));
+      return Left(InfrastructureException('Failed to fetch stocks by SIC code: $e'));
     }
   }
 
   @override
-  Future<Either<DomainException, List<Stock>>> getByGrade(String grade) async {
+  Future<Either<DomainException, ServerStock>> update(ServerStock stock) async {
     try {
-      final stocks = await generated.Stock.find(
-        _session,
-        where: (t) => t.grade.equals(grade),
-      );
-
-      final entities = stocks.map(StockMapper.toDomain).toList();
-      return Right(entities);
+      final dto = StockMapper.toDto(stock);
+      final updated = await protocol.Stock.update(_session, dto);
+      return Right(StockMapper.toDomain(updated));
     } catch (e) {
-      return Left(InfrastructureException('Failed to fetch stocks by grade: $e'));
+      return Left(InfrastructureException('Failed to update stock: $e'));
     }
   }
 
@@ -798,7 +631,7 @@ class StockRepository implements domain.StockRepository {
 }
 ```
 
-### 4. API Layer - Endpoints (zenvestor_server)
+### 5. API Layer - Endpoints (zenvestor_server)
 
 **File:** `zenvestor_server/lib/src/endpoints/stock_endpoint.dart`
 
@@ -811,28 +644,26 @@ import '../infrastructure/repositories/stock_repository.dart';
 class StockEndpoint extends Endpoint {
   Future<Map<String, dynamic>> addStock(
     Session session,
-    String symbol,
-    String? companyName,
-    String? sector,
-    String? industryGroup,
+    String ticker,
+    String companyName,
+    String? primarySicCode,
+    String? secondarySicCode,
     String? grade,
-    String? notes,
   ) async {
     try {
       // Create repository with session
-      final repository = StockRepository(session);
+      final repository = StockRepositoryImpl(session);
 
       // Create use case
       final useCase = AddStock(repository);
 
       // Execute business logic
       final result = await useCase.execute(
-        symbol: symbol,
+        ticker: ticker,
         companyName: companyName,
-        sector: sector,
-        industryGroup: industryGroup,
+        primarySicCode: primarySicCode,
+        secondarySicCode: secondarySicCode,
         grade: grade,
-        notes: notes,
       );
 
       // Transform result to API response
@@ -845,13 +676,12 @@ class StockEndpoint extends Endpoint {
           'success': true,
           'data': {
             'id': stock.id,
-            'symbol': stock.symbol.value,
-            'companyName': stock.companyName?.value,
-            'sector': stock.sector?.value,
-            'industryGroup': stock.industryGroup?.value,
+            'ticker': stock.tickerSymbol.value,
+            'companyName': stock.companyName.value,
+            'primarySicCode': stock.primarySicCode?.value,
+            'secondarySicCode': stock.secondarySicCode?.value,
             'grade': stock.grade?.value,
-            'notes': stock.notes.value,
-            'hasNotes': stock.hasNotes,
+            'createdAt': stock.createdAt.toIso8601String(),
           },
         },
       );
@@ -863,24 +693,13 @@ class StockEndpoint extends Endpoint {
     }
   }
 
-  Future<Map<String, dynamic>> updateStock(
+  Future<Map<String, dynamic>> getStock(
     Session session,
-    String id,
-    Map<String, dynamic> updates,
+    String ticker,
   ) async {
     try {
-      final repository = StockRepository(session);
-      final useCase = UpdateStock(repository);
-
-      final result = await useCase.execute(
-        id: id,
-        symbol: updates['symbol'] as String?,
-        companyName: updates['companyName'] as String?,
-        sector: updates['sector'] as String?,
-        industryGroup: updates['industryGroup'] as String?,
-        grade: updates['grade'] as String?,
-        notes: updates['notes'] as String?,
-      );
+      final repository = StockRepositoryImpl(session);
+      final result = await repository.getBySymbol(ticker);
 
       return result.fold(
         (failure) => {
@@ -891,10 +710,10 @@ class StockEndpoint extends Endpoint {
           'success': true,
           'data': {
             'id': stock.id,
-            'symbol': stock.symbol.value,
-            'companyName': stock.companyName?.value,
-            'sector': stock.sector?.value,
-            'industryGroup': stock.industryGroup?.value,
+            'ticker': stock.tickerSymbol.value,
+            'companyName': stock.companyName.value,
+            'primarySicCode': stock.primarySicCode?.value,
+            'secondarySicCode': stock.secondarySicCode?.value,
             'grade': stock.grade?.value,
             'updatedAt': stock.updatedAt.toIso8601String(),
           },
@@ -1090,18 +909,52 @@ class StockApiClient {
 
 ## Step-by-Step Developer Guide
 
-### Implementing a New Feature
+### Implementing a New Feature with Shared Domain
 
-Here's how to implement a new feature following our architecture:
+Here's how to implement a new feature using the shared domain package:
 
-#### Step 1: Define Domain Structure (YAML)
+#### Step 1: Create Shared Domain Entity
 
-Create the YAML file in the appropriate domain folder. For example, for a Portfolio feature:
+First, create the domain entity in the shared package:
+
+```bash
+# Create domain folder structure in shared package
+cd packages/zenvestor_domain
+mkdir -p lib/src/portfolio/value_objects
+```
+
+Create `packages/zenvestor_domain/lib/src/portfolio/portfolio.dart`:
+
+```dart
+import 'package:equatable/equatable.dart';
+import 'value_objects/portfolio_name.dart';
+
+class Portfolio extends Equatable {
+  final PortfolioName name;
+  final String? description;
+  final double? targetAllocation;
+
+  const Portfolio({
+    required this.name,
+    this.description,
+    this.targetAllocation,
+  });
+
+  bool get isFullyAllocated => targetAllocation == 100.0;
+
+  @override
+  List<Object?> get props => [name, description, targetAllocation];
+}
+```
+
+#### Step 2: Define Server Structure (YAML)
+
+Create the YAML file for Serverpod persistence:
 
 ```bash
 # Create domain folder structure in server
 cd zenvestor_server
-mkdir -p lib/src/domain/portfolio/value_objects
+mkdir -p lib/src/domain/portfolio
 ```
 
 Create `zenvestor_server/lib/src/domain/portfolio/portfolio.yaml`:
@@ -1121,7 +974,7 @@ indexes:
     fields: userId
 ```
 
-#### Step 2: Generate Code
+#### Step 3: Generate Code
 
 Run Serverpod generation:
 ```bash
@@ -1134,34 +987,40 @@ This creates:
 - Client-side protocol in `zenvestor_client/lib/src/protocol/portfolio.dart`
 - Database operations
 
-#### Step 3: Create Domain Entity
+#### Step 4: Create Server Domain Wrapper
 
-Create `zenvestor_server/lib/src/domain/portfolio/portfolio.dart`:
+Create `zenvestor_server/lib/src/domain/portfolio/server_portfolio.dart`:
 
 ```dart
-class Portfolio {
-  final String id;
-  final String userId;
-  final PortfolioName name;  // Value object
-  final String? description;
-  final double? targetAllocation;
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+
+class ServerPortfolio extends shared.Portfolio {
+  final int id;
+  final int userId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  // Constructor matching YAML fields
-  // Business logic methods like:
-  bool get isFullyAllocated => targetAllocation == 100.0;
-  // Equatable implementation
+  ServerPortfolio({
+    required this.id,
+    required this.userId,
+    required this.createdAt,
+    required this.updatedAt,
+    required shared.PortfolioName name,
+    String? description,
+    double? targetAllocation,
+  }) : super(
+    name: name,
+    description: description,
+    targetAllocation: targetAllocation,
+  );
+
+  shared.Portfolio toDomain() => shared.Portfolio(
+    name: name,
+    description: description,
+    targetAllocation: targetAllocation,
+  );
 }
 ```
-
-**Important**: Keep fields synchronized with YAML definition!
-
-#### Step 4: Create Value Objects
-
-Create value objects for business rules and validation:
-- `portfolio_name.dart` - Validation for portfolio names
-- Any other domain-specific validations
 
 #### Step 5: Define Repository Interface
 
@@ -1169,8 +1028,11 @@ Create `zenvestor_server/lib/src/domain/portfolio/repository.dart`:
 
 ```dart
 abstract class PortfolioRepository {
-  Future<Either<DomainException, Portfolio>> create(Portfolio portfolio);
-  Future<Either<DomainException, List<Portfolio>>> getByUserId(String userId);
+  Future<Either<DomainException, ServerPortfolio>> create(
+    shared.Portfolio portfolio,
+    int userId,
+  );
+  Future<Either<DomainException, List<ServerPortfolio>>> getByUserId(int userId);
   // Other operations
 }
 ```
@@ -1206,70 +1068,89 @@ In `zenvestor_flutter/`:
 ### Development Flow Summary
 
 ```
+Shared Domain:
+1. Domain Entity → 2. Value Objects → 3. Business Logic
+     ↓
 Server Side:
-1. Domain YAML → 2. Generate → 3. Domain Entity → 4. Value Objects
+4. YAML Definition → 5. Generate → 6. Server Wrapper
      ↓
-5. Repository Interface → 6. Mapper → 7. Repository Implementation
+7. Repository Interface → 8. Mapper → 9. Repository Implementation
      ↓
-8. Use Cases → 9. Endpoints
+10. Use Cases → 11. Endpoints
 
 Client Side:
-10. API Client → 11. Client Service → 12. View Model
+12. API Client → 13. Client Service → 14. View Model
       ↓
-13. Pages & Widgets → 14. User Interface
+15. Pages & Widgets → 16. User Interface
 ```
 
-## Managing YAML-Entity Synchronization
+## Managing Domain Synchronization
 
 ### Best Practices
 
-1. **Co-location**: Keep YAML and entity files together in domain folders
-2. **Naming Convention**: Use consistent naming (e.g., `stock.yaml` → `stock.dart`)
-3. **Documentation**: Comment in entity files when fields mirror YAML
-4. **Code Reviews**: Always review YAML and entity changes together
-5. **Testing**: Write tests that verify mapping correctness (see `/docs/serverpod-docs/06-concepts/19-testing/` for Serverpod testing patterns)
+1. **Shared Domain First**: Always start with shared domain entities
+2. **Co-location**: Keep YAML and server wrapper files together
+3. **Naming Convention**: Use consistent naming:
+   - Shared: `stock.dart` (in `zenvestor_domain`)
+   - Server: `server_stock.dart` and `stock.yaml`
+4. **Import Aliases**: Always use namespace aliases for clarity
+5. **Testing**: Write tests for both shared domain and server wrappers
 
 ### Synchronization Checklist
 
 When modifying a domain model:
-- [ ] Update YAML file with structural changes
+- [ ] Update shared domain entity if business logic changes
+- [ ] Update YAML file if persistence structure changes
 - [ ] Run `serverpod generate` in server directory
-- [ ] Update corresponding domain entity
-- [ ] Update mapper if new fields added
-- [ ] Update/create value objects for new validations
-- [ ] Update client-side display models if needed
-- [ ] Run tests to verify mapping
+- [ ] Update server wrapper to match both shared and YAML
+- [ ] Update mapper between protocol and domain
+- [ ] Update/create value objects in shared domain
+- [ ] Run tests in both shared domain and server
+- [ ] Update client if using shared domain directly
 
 ## Benefits of This Approach
 
 ### What We Keep from Clean Architecture
-- **Domain Independence**: Business logic doesn't depend on Serverpod
+- **Domain Independence**: Business logic in shared package has no framework dependencies
+- **Code Reuse**: Domain logic shared between server and Flutter
 - **Testability**: Each layer can be tested in isolation
-- **Flexibility**: Can change infrastructure without touching domain
+- **Flexibility**: Can change infrastructure without touching shared domain
 - **Clear Boundaries**: Explicit contracts between layers
+
+### What We Gain with Shared Domain
+- **Single Source of Truth**: One place for business rules
+- **Type Safety Across Projects**: Same domain types in server and client
+- **Reduced Duplication**: Write validation once, use everywhere
+- **Framework Agnostic**: Domain can outlive framework choices
 
 ### What We Simplify
 - **No Manual DTOs**: Generated automatically from YAML
 - **No Boilerplate Contracts**: Type safety through code generation
-- **Less Translation Code**: Only one mapper per entity
-- **Faster Development**: Focus on business logic, not plumbing
+- **Focused Mappers**: Only map between protocol and domain
+- **Faster Development**: Reuse domain logic across projects
 
 ### Trade-offs Accepted
-- **Minimal Redundancy**: YAML and entity definitions overlap
-- **Generation Dependency**: Must regenerate when YAML changes
-- **Framework Coupling**: YAML files use Serverpod's schema language
+- **Additional Package**: Managing a separate shared package
+- **Wrapper Pattern**: Server entities wrap shared domain
+- **Import Management**: Need to use namespace aliases
 
 ## Conclusion
 
-This architecture successfully combines Clean Architecture principles with Serverpod's code generation to create a simplified, pragmatic approach for Zenvestor. By treating YAML files as domain definitions and leveraging code generation for cross-cutting concerns, we maintain architectural benefits while accelerating development.
+This architecture successfully combines Clean Architecture principles with Serverpod's code generation and a shared domain package to create a powerful, pragmatic approach for Zenvestor. By separating business logic into a framework-agnostic shared package and using the wrapper pattern for infrastructure concerns, we achieve true domain independence while leveraging Serverpod's strengths.
 
 Key takeaways:
-- **YAML defines structure, entities define behavior**
-- **Three-project structure separates concerns clearly**
-- **Rich domain modeling is preserved**
-- **Code generation replaces manual boilerplate**
-- **Clear development flow from domain to UI**
+- **Shared domain package provides framework-agnostic business logic**
+- **Server wrappers add infrastructure concerns without polluting domain**
+- **YAML defines persistence structure, not business rules**
+- **Four-part structure maximizes code reuse and maintainability**
+- **Code generation eliminates boilerplate while maintaining type safety**
+- **Clear development flow from shared domain to implementation**
 
-The result is a maintainable, testable architecture that takes full advantage of Serverpod's capabilities while preserving Zenvestor's rich domain model and business logic.
+The result is a maintainable, testable architecture that:
+- Shares business logic between server and Flutter
+- Maintains clean separation of concerns
+- Takes full advantage of Serverpod's code generation
+- Preserves rich domain modeling and validation
+- Enables independent testing of each layer
 
 For deployment strategies and production considerations, refer to `/docs/serverpod-docs/07-deployments/` which covers various cloud platforms and deployment approaches.

@@ -63,16 +63,103 @@ For detailed Serverpod-specific implementation guidance, reference `/docs/server
 - Document complex business logic with explanatory comments
 - Use dartdoc comments (`///`) for all public APIs
 
+## Shared Domain Package Guidelines
+
+### Overview
+
+The Zenvestor project uses a shared domain package (`zenvestor_domain`) that contains framework-agnostic business logic, domain entities, value objects, and error types that are shared between the server and Flutter applications.
+
+### Package Structure
+
+- **Location**: `/packages/zenvestor_domain/`
+- **Purpose**: Single source of truth for business logic and domain modeling
+- **Framework**: Completely framework-agnostic (no Serverpod or Flutter dependencies)
+- **Import Convention**: Use namespace aliases for clarity
+  ```dart
+  import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+  ```
+
+### When to Use Shared Domain
+
+Place code in the shared domain package when:
+- It represents core business concepts (entities, value objects)
+- It contains business validation logic
+- It defines domain-specific errors
+- It needs to be used by both server and Flutter projects
+- It has no framework dependencies
+
+Keep code in project-specific domain when:
+- It requires framework-specific features (Serverpod Session, Flutter BuildContext)
+- It contains infrastructure concerns (database IDs, timestamps)
+- It's only relevant to one project
+
+### Server Wrapper Pattern
+
+For server-specific infrastructure concerns, use the wrapper pattern:
+```dart
+// In zenvestor_server/lib/src/domain/
+class ServerStock extends shared.Stock {
+  final int id;
+  final DateTime createdAt;
+  
+  ServerStock({
+    required this.id,
+    required this.createdAt,
+    required super.tickerSymbol,
+    // ... other shared fields
+  });
+}
+```
+
+### Testing Shared Domain Code
+
+- Tests go in `/packages/zenvestor_domain/test/`
+- Use shared fixtures across projects
+- Maintain 100% coverage for shared domain code
+- Run tests with: `dart test` in the package directory
+
+### Version Management
+
+- The shared domain package has its own version in `pubspec.yaml`
+- Use path dependencies for local development:
+  ```yaml
+  dependencies:
+    zenvestor_domain:
+      path: ../packages/zenvestor_domain
+  ```
+- Consider publishing as a separate package for production
+
+### Import Examples
+
+```dart
+// In server code
+import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+
+// Using shared domain types
+final stock = shared.Stock(
+  tickerSymbol: shared.TickerSymbol('AAPL'),
+  companyName: shared.CompanyName('Apple Inc.'),
+  // ...
+);
+
+// In Flutter code
+import 'package:zenvestor_domain/zenvestor_domain.dart' as domain;
+
+// Using shared value objects
+final ticker = domain.TickerSymbol('GOOGL');
+```
+
 ## Serverpod-Specific Guidelines
 
 **Note**: For detailed Serverpod concepts and implementation patterns, consult `/docs/serverpod-docs/`. This documentation provides comprehensive guidance on Serverpod features, best practices, and advanced patterns.
 
 ### Project Structure
 
-- Maintain clean separation between the three Serverpod projects:
+- Maintain clean separation between projects:
   - `zenvestor_server/` - Backend logic only
   - `zenvestor_client/` - Generated code only (never modify)
   - `zenvestor_flutter/` - Flutter UI and client logic
+  - `packages/zenvestor_domain/` - Shared domain logic
 
 ### Code Generation
 
@@ -83,12 +170,13 @@ For detailed Serverpod-specific implementation guidance, reference `/docs/server
 
 ### Domain Modeling
 
-- Keep YAML definitions and domain entities synchronized:
+- Keep YAML definitions, shared domain, and server domain synchronized:
   1. Update YAML file first
   2. Run `serverpod generate`
-  3. Update corresponding domain entity to match
-  4. Update mappers if fields were added/removed
-  5. Run all tests to verify
+  3. Update shared domain entity if the change is business logic
+  4. Update server domain wrapper if the change is infrastructure
+  5. Update mappers between protocol models and domain entities
+  6. Run all tests to verify
 
 ## Quality Checks
 
@@ -97,6 +185,11 @@ For detailed Serverpod-specific implementation guidance, reference `/docs/server
 Run ALL quality checks and fix all issues:
 
 ```bash
+# In packages/zenvestor_domain/
+dart analyze --fatal-infos
+dart format .
+dart test
+
 # In zenvestor_server/
 dart analyze --fatal-infos
 dart format .
@@ -110,6 +203,7 @@ flutter test
 
 ### Testing Commands
 
+- **Shared domain tests**: `dart test` in `packages/zenvestor_domain/`
 - **Server tests**: `dart test` in `zenvestor_server/`
 - **Flutter unit/widget tests**: `flutter test` in `zenvestor_flutter/`
 - **Integration tests**: `flutter test integration_test` in `zenvestor_flutter/`
@@ -228,9 +322,11 @@ version: 1.2.3+45  # version+buildNumber
 ### Clean Architecture Principles
 
 - **Never** import infrastructure code into domain layer
-- **Never** import Serverpod into domain entities
+- **Never** import Serverpod into shared domain entities
 - **Always** use repository interfaces in domain layer
 - **Always** map between generated DTOs and domain entities
+- **Always** keep shared domain completely framework-agnostic
+- **Use** server wrappers for infrastructure concerns
 
 ### Use Case Implementation
 

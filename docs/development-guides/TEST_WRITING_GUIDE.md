@@ -126,11 +126,12 @@ xdg-open coverage/html/index.html  # Linux
 ## Table of Contents
 
 1. [Test-Driven Development (TDD) Workflow](#test-driven-development-tdd-workflow)
-2. [Using Mocktail for Mocking](#using-mocktail-for-mocking)
-3. [Golden Testing with Alchemist](#golden-testing-with-alchemist)
-4. [Domain-Specific Test Fixtures](#domain-specific-test-fixtures)
-5. [Integration Testing](#integration-testing)
-6. [Test Organization](#test-organization)
+2. [Testing Shared Domain Package](#testing-shared-domain-package)
+3. [Using Mocktail for Mocking](#using-mocktail-for-mocking)
+4. [Golden Testing with Alchemist](#golden-testing-with-alchemist)
+5. [Domain-Specific Test Fixtures](#domain-specific-test-fixtures)
+6. [Integration Testing](#integration-testing)
+7. [Test Organization](#test-organization)
 
 ## Test-Driven Development (TDD) Workflow
 
@@ -169,6 +170,199 @@ class Stock {
 
 // Step 4: Refactor if needed
 // Step 5: Add edge case tests
+```
+
+## Testing Shared Domain Package
+
+The shared domain package (`packages/zenvestor_domain`) contains framework-agnostic business logic that must be thoroughly tested. Since this code is shared between server and Flutter applications, it's critical to ensure it works correctly.
+
+### Shared Domain Testing Principles
+
+1. **100% Coverage Required**: Shared domain code must have complete test coverage
+2. **No Framework Dependencies**: Tests should not depend on Serverpod or Flutter
+3. **Test All Validation**: Every validation rule must have corresponding tests
+4. **Test Error Cases**: All domain exceptions must be tested
+5. **Use Pure Dart Test Package**: Only use `package:test`, not `flutter_test`
+
+### Testing Domain Entities
+
+```dart
+// packages/zenvestor_domain/test/stock/stock_test.dart
+import 'package:test/test.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart';
+
+void main() {
+  group('Stock', () {
+    test('should create valid stock with all required fields', () {
+      final stock = Stock.create(
+        ticker: 'AAPL',
+        name: 'Apple Inc.',
+        primarySic: '3571',
+        grade: 'A',
+      );
+
+      expect(stock.tickerSymbol.value, equals('AAPL'));
+      expect(stock.companyName.value, equals('Apple Inc.'));
+      expect(stock.primarySicCode?.value, equals('3571'));
+      expect(stock.grade?.value, equals('A'));
+    });
+
+    test('should throw ValidationException for invalid ticker', () {
+      expect(
+        () => Stock.create(
+          ticker: 'INVALID123',
+          name: 'Test Company',
+        ),
+        throwsA(isA<ValidationException>()),
+      );
+    });
+  });
+}
+```
+
+### Testing Value Objects
+
+```dart
+// packages/zenvestor_domain/test/stock/value_objects/ticker_symbol_test.dart
+import 'package:test/test.dart';
+import 'package:zenvestor_domain/zenvestor_domain.dart';
+
+void main() {
+  group('TickerSymbol', () {
+    test('should create valid ticker symbol', () {
+      final ticker = TickerSymbol('AAPL');
+      expect(ticker.value, equals('AAPL'));
+    });
+
+    test('should uppercase input', () {
+      final ticker = TickerSymbol('aapl');
+      expect(ticker.value, equals('AAPL'));
+    });
+
+    test('should reject empty ticker', () {
+      expect(
+        () => TickerSymbol(''),
+        throwsA(
+          isA<ValidationException>()
+            .having((e) => e.field, 'field', 'ticker symbol')
+            .having((e) => e.code, 'code', 'invalid_length'),
+        ),
+      );
+    });
+
+    test('should reject ticker with numbers', () {
+      expect(
+        () => TickerSymbol('ABC123'),
+        throwsA(
+          isA<ValidationException>()
+            .having((e) => e.field, 'field', 'ticker symbol')
+            .having((e) => e.code, 'code', 'invalid_format'),
+        ),
+      );
+    });
+
+    test('should reject ticker longer than 5 characters', () {
+      expect(
+        () => TickerSymbol('ABCDEF'),
+        throwsA(isA<ValidationException>()),
+      );
+    });
+  });
+}
+```
+
+### Testing Domain Errors
+
+```dart
+// packages/zenvestor_domain/test/shared/errors/validation_errors_test.dart
+import 'package:test/test.dart';
+import 'package:zenvestor_domain/shared/errors.dart';
+
+void main() {
+  group('ValidationException', () {
+    test('should create with all factory methods', () {
+      final lengthError = ValidationException.invalidLength(
+        field: 'username',
+        min: 3,
+        max: 20,
+        actual: 2,
+      );
+
+      expect(lengthError.field, equals('username'));
+      expect(lengthError.code, equals('invalid_length'));
+      expect(lengthError.message, contains('3'));
+      expect(lengthError.message, contains('20'));
+
+      final formatError = ValidationException.invalidFormat(
+        field: 'email',
+        expected: 'email format',
+        actual: 'not-an-email',
+      );
+
+      expect(formatError.field, equals('email'));
+      expect(formatError.code, equals('invalid_format'));
+    });
+  });
+}
+```
+
+### Shared Domain Test Organization
+
+```
+packages/zenvestor_domain/
+├── lib/
+│   ├── src/
+│   │   ├── shared/
+│   │   │   └── errors/
+│   │   │       └── validation_errors.dart
+│   │   └── stock/
+│   │       ├── stock.dart
+│   │       └── value_objects/
+│   │           └── ticker_symbol.dart
+│   └── zenvestor_domain.dart
+└── test/
+    ├── shared/
+    │   └── errors/
+    │       └── validation_errors_test.dart
+    └── stock/
+        ├── stock_test.dart
+        └── value_objects/
+            └── ticker_symbol_test.dart
+```
+
+### Running Shared Domain Tests
+
+```bash
+cd packages/zenvestor_domain
+dart test
+
+# With coverage
+dart test --coverage
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html
+```
+
+### Shared Domain Fixtures
+
+Create fixtures specifically for shared domain testing:
+
+```dart
+// packages/zenvestor_domain/test/fixtures/stock_fixtures.dart
+import 'package:zenvestor_domain/zenvestor_domain.dart';
+
+class SharedStockFixture {
+  static Stock apple() => Stock(
+    tickerSymbol: TickerSymbol('AAPL'),
+    companyName: CompanyName('Apple Inc.'),
+    primarySicCode: SicCode('3571'),
+    grade: Grade('A'),
+  );
+
+  static Stock invalidAttempt() => Stock.create(
+    ticker: '', // Will throw
+    name: 'Invalid',
+  );
+}
 ```
 
 ## Using Mocktail for Mocking
@@ -607,12 +801,36 @@ test/src/domain/entities/stock_test.dart
 #### Complete Structure Example
 
 ```
+packages/
+└── zenvestor_domain/                    # Shared domain package
+    ├── lib/
+    │   ├── src/
+    │   │   ├── shared/
+    │   │   │   └── errors/
+    │   │   │       └── validation_errors.dart
+    │   │   └── stock/
+    │   │       ├── stock.dart
+    │   │       └── value_objects/
+    │   │           └── ticker_symbol.dart
+    │   └── zenvestor_domain.dart
+    └── test/
+        ├── shared/
+        │   └── errors/
+        │       └── validation_errors_test.dart  # Mirrors lib/src/shared/errors/
+        ├── stock/
+        │   ├── stock_test.dart                 # Mirrors lib/src/stock/
+        │   └── value_objects/
+        │       └── ticker_symbol_test.dart
+        └── fixtures/
+            └── stock_fixtures.dart
+
 zenvestor_server/
 ├── lib/
 │   └── src/
 │       ├── domain/
-│       │   ├── entities/
-│       │   │   └── stock.dart
+│       │   ├── stock/
+│       │   │   ├── server_stock.dart
+│       │   │   └── repository.dart
 │       │   └── use_cases/
 │       │       └── get_stock_by_symbol.dart
 │       └── infrastructure/
@@ -621,8 +839,9 @@ zenvestor_server/
 ├── test/
 │   ├── src/
 │   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   │   └── stock_test.dart          # Mirrors lib/src/domain/entities/stock.dart
+│   │   │   ├── stock/
+│   │   │   │   ├── server_stock_test.dart    # Mirrors lib/src/domain/stock/
+│   │   │   │   └── repository_test.dart
 │   │   │   └── use_cases/
 │   │   │       └── get_stock_by_symbol_test.dart
 │   │   └── infrastructure/
@@ -725,7 +944,12 @@ Tests should run in this order in CI:
 
 ### Coverage Requirements
 
-The Zenvestor project enforces **100% code coverage** for both `zenvestor_server` and `zenvestor_flutter`. This requirement is automatically enforced by our git hooks and CI/CD pipeline.
+The Zenvestor project enforces **100% code coverage** for all three packages:
+- `packages/zenvestor_domain` (shared domain)
+- `zenvestor_server` (backend)
+- `zenvestor_flutter` (frontend)
+
+This requirement is automatically enforced by our git hooks and CI/CD pipeline.
 
 ### Why dlcov?
 
@@ -734,13 +958,18 @@ Standard Dart/Flutter coverage tools only report coverage for files that are loa
 ### Running Coverage Locally
 
 ```bash
-# Run coverage for both projects
+# Run coverage for all projects
 ./scripts/test-coverage.sh
+
+# Run coverage for shared domain only
+cd packages/zenvestor_domain
+dart test --coverage
+genhtml coverage/lcov.info -o coverage/html
 
 # Run coverage for server only
 cd zenvestor_server
 dlcov gen-refs  # Generate references to all source files
-flutter test --coverage
+dart test --coverage
 dlcov -c 100 --include-untested-files=true --exclude-suffix=".g.dart,.freezed.dart"
 
 # Run coverage for Flutter only
@@ -754,15 +983,17 @@ dlcov -c 100 --include-untested-files=true --exclude-suffix=".g.dart,.freezed.da
 
 When you run coverage, you'll see output like:
 ```
+Domain:  100.0%
 Server:  35.4%
 Flutter: 100.0%
 ```
 
 This means:
+- Shared domain has 100% of its code covered by tests
 - Server has only 35.4% of its code covered by tests
 - Flutter has 100% of its code covered
 
-The pre-commit hook will fail if either project is below 100%.
+The pre-commit hook will fail if any project is below 100%.
 
 ### Finding Untested Code
 
@@ -797,14 +1028,16 @@ The following files are automatically excluded from coverage:
 1. **Write meaningful tests** - Never write trivial tests to game coverage metrics
 2. **Write tests first** - Follow TDD strictly
 3. **Mirror source structure** - Test directory must exactly match source directory structure
-4. **Always use fixtures** - Never create test data inline, use consistent fixtures
-5. **Mock at boundaries** - Only mock external dependencies
-6. **Use realistic fixtures** - Domain-specific test data over random data
-7. **Keep tests focused** - One assertion per test when possible
-8. **Test behavior, not implementation** - Tests should survive refactoring
-9. **Maintain test quality** - Tests need the same care as production code
-10. **Run tests frequently** - Before every commit
-11. **Update goldens carefully** - Review visual changes before approving
-12. **Maintain 100% coverage** - Use dlcov to ensure all files are tested
+4. **Test shared domain thoroughly** - This code is used by both server and Flutter
+5. **Always use fixtures** - Never create test data inline, use consistent fixtures
+6. **Mock at boundaries** - Only mock external dependencies
+7. **Use realistic fixtures** - Domain-specific test data over random data
+8. **Keep tests focused** - One assertion per test when possible
+9. **Test behavior, not implementation** - Tests should survive refactoring
+10. **Maintain test quality** - Tests need the same care as production code
+11. **Run tests frequently** - Before every commit
+12. **Update goldens carefully** - Review visual changes before approving
+13. **Maintain 100% coverage** - Use dlcov to ensure all files are tested
+14. **No framework deps in shared** - Keep shared domain tests framework-agnostic
 
 Remember: Tests are documentation of intended behavior. Write them clearly and maintain them well. Coverage requirements exist to encourage quality, not to be gamed.

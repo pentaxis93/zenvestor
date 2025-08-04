@@ -2,46 +2,71 @@
 
 ## Overview
 
-This guide explains the purpose and responsibility of each component in Zenvestor's clean architecture. Zenvestor follows Serverpod's three-project structure, with each project serving a specific purpose in the overall architecture.
+This guide explains the purpose and responsibility of each component in Zenvestor's clean architecture. Zenvestor uses a four-part structure: a shared domain package for framework-agnostic business logic, plus Serverpod's three-project structure (server, client, flutter), with each project serving a specific purpose in the overall architecture.
+
+## Shared Domain Package Components
+
+### Core Domain Layer
+
+The shared domain package (`packages/zenvestor_domain`) contains framework-agnostic business logic that is shared between server and Flutter applications.
+
+#### Domain Entities (`stock.dart`)
+- **Purpose**: Define core business concepts without infrastructure concerns
+- **Responsibility**:
+  - Encapsulate business logic and validation
+  - Provide framework-agnostic implementation
+  - Define business operations and rules
+- **Example Use**: `Stock.create()` factory with business validation
+- **Key Principle**: No dependencies on Serverpod, Flutter, or any framework
+
+#### Value Objects (`ticker_symbol.dart`, `grade.dart`)
+- **Purpose**: Represent immutable domain concepts with validation
+- **Responsibility**:
+  - Enforce validation rules at construction
+  - Provide type-safe domain primitives
+  - Throw domain-specific exceptions
+- **Example Use**: `TickerSymbol` ensures valid ticker format
+- **Key Principle**: Make invalid states unrepresentable
+
+#### Domain Errors (`stock_errors.dart`, `validation_errors.dart`)
+- **Purpose**: Define domain-specific exceptions and error types
+- **Responsibility**:
+  - Provide rich error information
+  - Support functional error handling
+  - Enable consistent error handling across projects
+- **Example Use**: `ValidationException.invalidLength()` with detailed context
+- **Key Principle**: Errors are part of the domain model
 
 ## Server-Side Components
 
-### Domain Layer
+### Server Domain Layer
 
-The domain layer is the heart of our business logic - pure, framework-agnostic code that represents our business concepts and rules.
+The server domain layer extends the shared domain with infrastructure concerns specific to the backend.
 
 #### YAML Files (`stock.yaml`)
-- **Purpose**: Define the persistent structure of domain entities
-- **Responsibility**: Specify fields, types, and database constraints
-- **Example Use**: Declaring that a Stock has a symbol, company name, sector, etc.
-- **Key Principle**: These are domain definitions written in Serverpod's schema language
+- **Purpose**: Define the persistent structure for Serverpod database models
+- **Responsibility**: Specify database fields, types, and constraints
+- **Example Use**: Declaring database fields like id, createdAt, updatedAt
+- **Key Principle**: Infrastructure-specific persistence definitions
 
-#### Domain Entities (`stock.dart`)
-- **Purpose**: Encapsulate business behavior and enforce business rules
+#### Server Domain Wrappers (`server_stock.dart`)
+- **Purpose**: Extend shared domain entities with infrastructure concerns
 - **Responsibility**:
-  - Implement business logic methods
-  - Maintain entity invariants
-  - Provide domain-specific operations
-- **Example Use**: `stock.updateFields()` method that ensures sector-industry consistency
-- **Key Principle**: Rich domain models with behavior, not just data containers
-
-#### Value Objects (`stock_symbol.dart`, `grade.dart`)
-- **Purpose**: Represent domain concepts that are defined by their value, not identity
-- **Responsibility**:
-  - Enforce validation rules at construction
-  - Provide immutability
-  - Encapsulate domain-specific logic
-- **Example Use**: `StockSymbol` ensures symbols are 1-5 uppercase letters
-- **Key Principle**: Make invalid states unrepresentable
+  - Add database IDs and timestamps
+  - Wrap shared domain entities
+  - Provide conversion to/from shared domain
+- **Example Use**: `ServerStock` extends `shared.Stock` with id and timestamps
+- **Key Principle**: Keep infrastructure concerns separate from business logic
 
 #### Repository Interfaces (`repository.dart`)
 - **Purpose**: Define contracts for data persistence without implementation details
 - **Responsibility**:
   - Declare available persistence operations
-  - Return domain entities, not DTOs
+  - Use server domain wrappers (with IDs)
+  - Accept shared domain entities for creation
   - Use functional error handling (Either types)
-- **Example Use**: `Future<Either<DomainException, Stock>> getBySymbol(String symbol)`
-- **Key Principle**: Domain layer defines what it needs, infrastructure provides it
+- **Example Use**: `Future<Either<DomainException, ServerStock>> create(shared.Stock stock)`
+- **Key Principle**: Repository interfaces bridge shared and server domains
 
 ### Application Layer
 
@@ -79,13 +104,17 @@ The infrastructure layer implements the interfaces defined by the domain.
 - **Key Principle**: Depends on domain interfaces, not the other way around
 
 #### Mappers (`stock_mapper.dart`)
-- **Purpose**: Convert between domain entities and generated DTOs
+- **Purpose**: Convert between layers (protocol ↔ server domain ↔ shared domain)
 - **Responsibility**:
-  - Map Serverpod DTOs to domain entities (and vice versa)
+  - Map Serverpod protocol DTOs to server domain wrappers
+  - Convert between server wrappers and shared domain
   - Handle value object creation during mapping
   - Manage nullable field conversions
-- **Example Use**: Converting `generated.Stock` to domain `Stock` with proper value objects
-- **Key Principle**: Keep mapping logic separate from business logic
+- **Example Use**: 
+  - `toDomain(protocol.Stock)` → `ServerStock`
+  - `toDto(ServerStock)` → `protocol.Stock`
+  - `fromSharedDomain(shared.Stock)` → `protocol.Stock`
+- **Key Principle**: Mappers handle all layer translations in one place
 
 ### API Layer (Endpoints)
 
@@ -180,16 +209,25 @@ The presentation layer handles all UI concerns and user interactions.
 
 ### Server-Side Flow
 ```
-Endpoint → Use Case → Repository Interface → Domain Entity
+Endpoint → Use Case → Repository Interface → Server Domain Wrapper
+                ↓                                    ↓
+         Infrastructure Repository          Shared Domain Entity
                 ↓
-         Infrastructure Repository → Mapper → Generated DTO
+            Mapper → Protocol DTO → Database
 ```
 
 ### Client-Side Flow
 ```
 Page → View Model → Client Service → API Client → Server Endpoint
-  ↑         ↓
-Widget    State
+  ↑         ↓              ↓
+Widget    State    (optional) Shared Domain
+```
+
+### Cross-Layer Mapping
+```
+Shared Domain ← → Server Domain Wrapper ← → Protocol DTO ← → Database
+     ↑                                                           ↓
+  Flutter App                                              Serverpod ORM
 ```
 
 ### Key Principles Across All Components
@@ -203,16 +241,19 @@ Widget    State
 ## When to Create Each Component
 
 ### Always Create
-- Domain entity (when you have a business concept)
+- Shared domain entity (when you have a business concept)
+- Server domain wrapper (when entity needs persistence)
+- YAML file (for Serverpod database model)
 - Repository interface (when entity needs persistence)
 - Repository implementation (to fulfill the interface)
-- Mapper (to convert between layers)
+- Mapper (to convert between all layers)
 - At least one use case (to implement business operations)
 - Endpoint (to expose operations via API)
 - Page and view model (for each user workflow)
 
 ### Create When Needed
-- Value objects (when you have constrained values)
+- Value objects in shared domain (when you have constrained values)
+- Domain errors (for rich error handling)
 - Application services (when orchestrating multiple use cases)
 - Client services (when coordinating multiple API calls)
 - Reusable widgets (when UI patterns repeat)
@@ -222,17 +263,30 @@ Widget    State
 ## Common Mistakes to Avoid
 
 1. **Putting business logic in endpoints**: Use cases should contain business logic
-2. **Coupling domain to infrastructure**: Domain should never import Serverpod
-3. **Fat view models**: Keep presentation logic separate from business logic
-4. **Skipping mappers**: Always map between layers to maintain boundaries
-5. **Overusing application services**: Only create when truly needed for orchestration
+2. **Adding framework dependencies to shared domain**: Keep it framework-agnostic
+3. **Forgetting to use namespace aliases**: Always import shared domain with `as shared`
+4. **Mixing infrastructure concerns in shared domain**: Use server wrappers instead
+5. **Coupling domain to infrastructure**: Shared domain should never import Serverpod
+6. **Fat view models**: Keep presentation logic separate from business logic
+7. **Skipping mappers**: Always map between layers to maintain boundaries
+8. **Overusing application services**: Only create when truly needed for orchestration
 
 ## Conclusion
 
 Each component in our architecture has a specific purpose and set of responsibilities. By understanding and respecting these boundaries, we create a system that is:
 - **Maintainable**: Changes are localized to appropriate components
+- **Reusable**: Shared domain logic works in both server and Flutter
 - **Testable**: Each component can be tested independently
 - **Scalable**: New features follow established patterns
 - **Understandable**: Clear separation of concerns
 
-Remember: When in doubt about where code belongs, ask "What is this code's primary concern?" and place it in the appropriate layer.
+Key architecture decisions:
+- **Shared domain package** for framework-agnostic business logic
+- **Server wrappers** to add infrastructure concerns
+- **Clean mapping** between all layers
+- **Consistent patterns** across the entire codebase
+
+Remember: When in doubt about where code belongs, ask:
+1. "Is this business logic?" → Shared domain
+2. "Is this infrastructure?" → Server wrapper or infrastructure layer
+3. "What is this code's primary concern?" → Place in appropriate layer
