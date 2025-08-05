@@ -1,6 +1,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:serverpod/serverpod.dart';
 import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import 'package:zenvestor_server/src/domain/stock/stock.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 import 'package:zenvestor_server/src/generated/infrastructure/stock/stock_model.dart'
@@ -26,8 +27,7 @@ class StockRepositoryServerpod implements IStockRepository {
   // database methods (Stock.db.insertRow) which cannot be mocked.
   // Proper testing would require integration tests with a real database.
   @override
-  Future<Either<StockRepositoryError, shared.Stock>> add(
-      shared.Stock stock) async {
+  Future<Either<StockRepositoryError, Stock>> add(shared.Stock stock) async {
     try {
       // Check if ticker already exists
       final existsResult = await existsByTicker(stock.ticker);
@@ -93,9 +93,16 @@ class StockRepositoryServerpod implements IStockRepository {
       }
 
       final mappedPersistenceModel = persistenceResult.toNullable()!;
-      final domainStock = mappedPersistenceModel.stock;
 
-      return Right(domainStock);
+      // Create server domain Stock with infrastructure data
+      final serverStock = Stock.fromSharedStock(
+        id: mappedPersistenceModel.id,
+        createdAt: mappedPersistenceModel.createdAt,
+        updatedAt: mappedPersistenceModel.updatedAt,
+        sharedStock: mappedPersistenceModel.stock,
+      );
+
+      return Right(serverStock);
       // This shouldn't happen as we're mapping back our own data,
       // but handle it gracefully
     } on DatabaseException catch (e) {

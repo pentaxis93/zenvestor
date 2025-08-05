@@ -1,5 +1,6 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import 'package:zenvestor_server/src/domain/stock/stock.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 
 /// Repository interface for managing stock entities in the domain layer.
@@ -25,12 +26,13 @@ abstract interface class IStockRepository {
   /// ticker that already exists will result in a failure.
   ///
   /// Returns:
-  /// - [Right] containing the domain [shared.Stock] on success
+  /// - [Right] containing the server domain [Stock] with infrastructure
+  ///   data (id, timestamps) on success
   /// - [Left] containing [StockAlreadyExistsError] if a stock with
   ///   the same ticker already exists
   /// - [Left] containing [StockStorageError] if infrastructure
   ///   operations fail
-  Future<Either<StockRepositoryError, shared.Stock>> add(shared.Stock stock);
+  Future<Either<StockRepositoryError, Stock>> add(shared.Stock stock);
 
   /// Checks whether a stock with the given ticker symbol exists.
   ///

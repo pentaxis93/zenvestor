@@ -117,19 +117,13 @@ class AddStockUseCase {
     final savedStock = addResult.toNullable()!;
 
     // Step 5: Transform to response DTO
-    // Note: The repository implementation is responsible for managing
-    // infrastructure concerns like IDs and timestamps. Since we're working
-    // with pure domain entities, we'll need to get this information from
-    // the repository's response or generate it here for the DTO.
-    // TODO(architecture): Refactor AddStockResponse to not require
-    // infrastructure data, or have the repository return a richer response
-    // type.
+    // The repository now returns a server domain Stock with infrastructure data
     return right(
       AddStockResponse(
-        id: 'generated-by-repository', // Repository should handle this
+        id: savedStock.id,
         ticker: savedStock.ticker.value,
-        createdAt: DateTime.now(), // Repository should handle this
-        updatedAt: DateTime.now(), // Repository should handle this
+        createdAt: savedStock.createdAt,
+        updatedAt: savedStock.updatedAt,
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import 'package:zenvestor_server/src/domain/stock/stock.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 
@@ -9,26 +10,30 @@ import '../../fixtures/domain_fixtures.dart';
 
 class MockStockRepository extends Mock implements IStockRepository {}
 
-class FakeStock extends Fake implements shared.Stock {}
+class FakeSharedStock extends Fake implements shared.Stock {}
+
+class FakeStock extends Fake implements Stock {}
 
 class FakeTickerSymbol extends Fake implements shared.TickerSymbol {}
 
 void main() {
   setUpAll(() {
+    registerFallbackValue(FakeSharedStock());
     registerFallbackValue(FakeStock());
     registerFallbackValue(FakeTickerSymbol());
   });
 
   group('IStockRepository', () {
     late IStockRepository repository;
-    late shared.Stock validStock;
+    late shared.Stock validSharedStock;
+    late Stock validServerStock;
     late shared.TickerSymbol validTicker;
 
     setUp(() {
       repository = MockStockRepository();
       validTicker = DomainFixtures.tickerSymbol();
 
-      // Create a valid stock for testing
+      // Create a valid shared stock for testing
       final stockResult = shared.Stock.create(
         ticker: validTicker,
         name: Some(DomainFixtures.companyName()),
@@ -36,8 +41,16 @@ void main() {
         grade: Some(DomainFixtures.grade()),
       );
 
-      validStock = stockResult.getOrElse(
+      validSharedStock = stockResult.getOrElse(
         (error) => throw Exception('Failed to create test stock: $error'),
+      );
+
+      // Create server domain stock
+      validServerStock = Stock(
+        id: 'test-id-123',
+        createdAt: DateTime(2024),
+        updatedAt: DateTime(2024),
+        sharedStock: validSharedStock,
       );
     });
 
@@ -57,7 +70,7 @@ void main() {
 
         // Test add method signature
         when(() => repository.add(any())).thenAnswer(
-          (_) async => right<StockRepositoryError, shared.Stock>(validStock),
+          (_) async => right<StockRepositoryError, Stock>(validServerStock),
         );
 
         // Test existsByTicker method signature
@@ -70,22 +83,22 @@ void main() {
     group('add', () {
       test(
           'should accept Stock parameter and '
-          'return Either<StockRepositoryError, shared.Stock>', () async {
+          'return Either<StockRepositoryError, Stock>', () async {
         // Arrange
-        when(() => repository.add(validStock)).thenAnswer(
-          (_) async => right<StockRepositoryError, shared.Stock>(validStock),
+        when(() => repository.add(validSharedStock)).thenAnswer(
+          (_) async => right<StockRepositoryError, Stock>(validServerStock),
         );
 
         // Act
-        final result = await repository.add(validStock);
+        final result = await repository.add(validSharedStock);
 
         // Assert
         expect(result.isRight(), isTrue);
         result.fold(
           (error) => fail('Should not return error'),
-          (stock) => expect(stock, equals(validStock)),
+          (stock) => expect(stock, equals(validServerStock)),
         );
-        verify(() => repository.add(validStock)).called(1);
+        verify(() => repository.add(validSharedStock)).called(1);
       });
 
       test(
@@ -93,12 +106,12 @@ void main() {
           'stock with same ticker exists', () async {
         // Arrange
         final error = StockAlreadyExistsError(validTicker.value);
-        when(() => repository.add(validStock)).thenAnswer(
-          (_) async => left<StockRepositoryError, shared.Stock>(error),
+        when(() => repository.add(validSharedStock)).thenAnswer(
+          (_) async => left<StockRepositoryError, Stock>(error),
         );
 
         // Act
-        final result = await repository.add(validStock);
+        final result = await repository.add(validSharedStock);
 
         // Assert
         expect(result.isLeft(), isTrue);
@@ -116,12 +129,12 @@ void main() {
           () async {
         // Arrange
         const error = StockStorageError('Database connection failed');
-        when(() => repository.add(validStock)).thenAnswer(
-          (_) async => left<StockRepositoryError, shared.Stock>(error),
+        when(() => repository.add(validSharedStock)).thenAnswer(
+          (_) async => left<StockRepositoryError, Stock>(error),
         );
 
         // Act
-        final result = await repository.add(validStock);
+        final result = await repository.add(validSharedStock);
 
         // Assert
         expect(result.isLeft(), isTrue);
@@ -142,12 +155,12 @@ void main() {
         // repository.add({'ticker': 'AAPL'}); // This should NOT compile
 
         // Only Stock should be accepted
-        when(() => repository.add(validStock)).thenAnswer(
-          (_) async => right<StockRepositoryError, shared.Stock>(validStock),
+        when(() => repository.add(validSharedStock)).thenAnswer(
+          (_) async => right<StockRepositoryError, Stock>(validServerStock),
         );
 
         // This verifies the parameter is of type Stock
-        expect(() => repository.add(validStock), returnsNormally);
+        expect(() => repository.add(validSharedStock), returnsNormally);
       });
     });
 
@@ -172,6 +185,19 @@ void main() {
         verify(() => repository.existsByTicker(validTicker)).called(1);
       });
 
+      test('should return true when stock exists', () async {
+        // Arrange
+        when(() => repository.existsByTicker(validTicker)).thenAnswer(
+          (_) async => right<StockRepositoryError, bool>(true),
+        );
+
+        // Act
+        final result = await repository.existsByTicker(validTicker);
+
+        // Assert
+        expect(result.toNullable(), equals(true));
+      });
+
       test('should return false when stock does not exist', () async {
         // Arrange
         when(() => repository.existsByTicker(validTicker)).thenAnswer(
@@ -182,17 +208,13 @@ void main() {
         final result = await repository.existsByTicker(validTicker);
 
         // Assert
-        expect(result.isRight(), isTrue);
-        result.fold(
-          (error) => fail('Should not return error'),
-          (exists) => expect(exists, isFalse),
-        );
+        expect(result.toNullable(), equals(false));
       });
 
       test('should return StockStorageError when infrastructure fails',
           () async {
         // Arrange
-        const error = StockStorageError('Query timeout');
+        const error = StockStorageError('Database connection failed');
         when(() => repository.existsByTicker(validTicker)).thenAnswer(
           (_) async => left<StockRepositoryError, bool>(error),
         );
@@ -205,7 +227,8 @@ void main() {
         result.fold(
           (err) {
             expect(err, isA<StockStorageError>());
-            expect((err as StockStorageError).message, equals('Query timeout'));
+            expect((err as StockStorageError).message,
+                equals('Database connection failed'));
           },
           (exists) => fail('Should return error'),
         );
@@ -213,13 +236,13 @@ void main() {
 
       test('should use domain types not primitives', () {
         // This test ensures we're using TickerSymbol, not a String
-        // The type system enforces this - if we could pass a String,
-        // this would compile:
+        // primitive. The type system enforces this - if we could pass
+        // a String, this would compile:
         // repository.existsByTicker('AAPL'); // This should NOT compile
 
         // Only TickerSymbol should be accepted
         when(() => repository.existsByTicker(validTicker)).thenAnswer(
-          (_) async => right<StockRepositoryError, bool>(false),
+          (_) async => right<StockRepositoryError, bool>(true),
         );
 
         // This verifies the parameter is of type TickerSymbol
@@ -227,26 +250,26 @@ void main() {
       });
     });
 
-    group('Return Types', () {
-      test('all methods should return Future<Either<StockRepositoryError, T>>',
-          () {
-        // This test verifies that all methods follow the functional
-        // error handling pattern
+    group('Error Types', () {
+      test('StockRepositoryError should be sealed', () {
+        // This verifies that StockRepositoryError is a sealed class
+        // and all subtypes are accounted for in switches
+        StockRepositoryError testError({required bool isAlreadyExists}) {
+          return isAlreadyExists
+              ? const StockAlreadyExistsError('TEST')
+              : const StockStorageError('Test error');
+        }
 
-        // add returns Future<Either<StockRepositoryError, shared.Stock>>
-        when(() => repository.add(any())).thenAnswer(
-          (_) async => right<StockRepositoryError, shared.Stock>(validStock),
-        );
-        final addResult = repository.add(validStock);
-        expect(addResult,
-            isA<Future<Either<StockRepositoryError, shared.Stock>>>());
+        final error = testError(isAlreadyExists: true);
 
-        // existsByTicker returns Future<Either<StockRepositoryError, bool>>
-        when(() => repository.existsByTicker(any())).thenAnswer(
-          (_) async => right<StockRepositoryError, bool>(true),
-        );
-        final existsResult = repository.existsByTicker(validTicker);
-        expect(existsResult, isA<Future<Either<StockRepositoryError, bool>>>());
+        // Exhaustive switch - will fail to compile if not all
+        // subtypes are handled
+        final message = switch (error) {
+          StockAlreadyExistsError() => 'Already exists',
+          StockStorageError() => 'Storage error',
+        };
+
+        expect(message, equals('Already exists'));
       });
     });
   });

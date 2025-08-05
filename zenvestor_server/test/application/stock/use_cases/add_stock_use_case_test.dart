@@ -6,6 +6,7 @@ import 'package:zenvestor_server/src/application/shared/errors/application_error
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_request.dart';
 import 'package:zenvestor_server/src/application/stock/dtos/add_stock_response.dart';
 import 'package:zenvestor_server/src/application/stock/use_cases/add_stock_use_case.dart';
+import 'package:zenvestor_server/src/domain/stock/stock.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 
@@ -13,7 +14,9 @@ class MockStockRepository extends Mock implements IStockRepository {}
 
 class FakeTickerSymbol extends Fake implements shared.TickerSymbol {}
 
-class FakeStock extends Fake implements shared.Stock {}
+class FakeSharedStock extends Fake implements shared.Stock {}
+
+class FakeStock extends Fake implements Stock {}
 
 void main() {
   late MockStockRepository mockRepository;
@@ -21,6 +24,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(FakeTickerSymbol());
+    registerFallbackValue(FakeSharedStock());
     registerFallbackValue(FakeStock());
   });
 
@@ -36,14 +40,20 @@ void main() {
         // Arrange
         const request = AddStockRequest(ticker: 'AAPL');
         final tickerSymbol = shared.TickerSymbol.create('AAPL').toNullable()!;
-        final stock = shared.Stock.create(
+        final sharedStock = shared.Stock.create(
           ticker: tickerSymbol,
         ).toNullable()!;
+        final serverStock = Stock(
+          id: 'test-id-123',
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+          sharedStock: sharedStock,
+        );
 
         when(() => mockRepository.existsByTicker(any()))
             .thenAnswer((_) async => right(false));
         when(() => mockRepository.add(any()))
-            .thenAnswer((_) async => right(stock));
+            .thenAnswer((_) async => right(serverStock));
 
         // Act
         final result = await useCase.execute(request);
@@ -54,10 +64,10 @@ void main() {
           (error) => fail('Expected success but got $error'),
           (response) {
             expect(response, isA<AddStockResponse>());
-            expect(response.id, equals('generated-by-repository'));
+            expect(response.id, equals('test-id-123'));
             expect(response.ticker, 'AAPL');
-            expect(response.createdAt, isA<DateTime>());
-            expect(response.updatedAt, isA<DateTime>());
+            expect(response.createdAt, equals(DateTime(2024)));
+            expect(response.updatedAt, equals(DateTime(2024)));
           },
         );
 
@@ -226,14 +236,20 @@ void main() {
         // Arrange
         const request = AddStockRequest(ticker: 'aapl');
         final tickerSymbol = shared.TickerSymbol.create('aapl').toNullable()!;
-        final stock = shared.Stock.create(
+        final sharedStock = shared.Stock.create(
           ticker: tickerSymbol,
         ).toNullable()!;
+        final serverStock = Stock(
+          id: 'test-id-456',
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+          sharedStock: sharedStock,
+        );
 
         when(() => mockRepository.existsByTicker(any()))
             .thenAnswer((_) async => right(false));
         when(() => mockRepository.add(any()))
-            .thenAnswer((_) async => right(stock));
+            .thenAnswer((_) async => right(serverStock));
 
         // Act
         final result = await useCase.execute(request);
@@ -253,14 +269,20 @@ void main() {
         const request = AddStockRequest(ticker: '  AAPL  ');
         final tickerSymbol =
             shared.TickerSymbol.create('  AAPL  ').toNullable()!;
-        final stock = shared.Stock.create(
+        final sharedStock = shared.Stock.create(
           ticker: tickerSymbol,
         ).toNullable()!;
+        final serverStock = Stock(
+          id: 'test-id-789',
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+          sharedStock: sharedStock,
+        );
 
         when(() => mockRepository.existsByTicker(any()))
             .thenAnswer((_) async => right(false));
         when(() => mockRepository.add(any()))
-            .thenAnswer((_) async => right(stock));
+            .thenAnswer((_) async => right(serverStock));
 
         // Act
         final result = await useCase.execute(request);
@@ -310,14 +332,20 @@ void main() {
         // Arrange
         const request = AddStockRequest(ticker: 'A');
         final tickerSymbol = shared.TickerSymbol.create('A').toNullable()!;
-        final stock = shared.Stock.create(
+        final sharedStock = shared.Stock.create(
           ticker: tickerSymbol,
         ).toNullable()!;
+        final serverStock = Stock(
+          id: 'test-id-999',
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+          sharedStock: sharedStock,
+        );
 
         when(() => mockRepository.existsByTicker(any()))
             .thenAnswer((_) async => right(false));
         when(() => mockRepository.add(any()))
-            .thenAnswer((_) async => right(stock));
+            .thenAnswer((_) async => right(serverStock));
 
         // Act
         final result = await useCase.execute(request);
