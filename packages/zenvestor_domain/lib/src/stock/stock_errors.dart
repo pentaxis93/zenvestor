@@ -568,4 +568,3 @@ sealed class StockError extends DomainError {
   /// Creates a [StockError].
   const StockError();
 }
-

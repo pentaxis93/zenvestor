@@ -163,7 +163,9 @@ void main() {
               (error) {
                 expect(error, isA<SicCodeOutOfRange>());
                 final rangeError = error as SicCodeOutOfRange;
-                expect(rangeError.actualValue, invalidCode);
+                // For normalized values, actualValue will show both
+                // original and normalized
+                expect(rangeError.actualValue, contains(invalidCode));
                 expect(
                   rangeError.message,
                   contains('must be between 0100 and 9999'),

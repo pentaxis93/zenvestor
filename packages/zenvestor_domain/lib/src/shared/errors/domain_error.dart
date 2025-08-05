@@ -12,4 +12,14 @@ import 'package:equatable/equatable.dart';
 abstract class DomainError extends Equatable {
   /// Creates a domain error.
   const DomainError();
+
+  @override
+  String toString() {
+    final className = runtimeType.toString();
+    if (props.isEmpty) {
+      return className;
+    }
+    final propsString = props.map((prop) => prop.toString()).join(', ');
+    return '$className($propsString)';
+  }
 }

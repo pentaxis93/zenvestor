@@ -564,7 +564,6 @@ void main() {
     });
   });
 
-
   group('error type relationships', () {
     test('different error hierarchies are distinct', () {
       const tickerError = TickerSymbolEmpty();

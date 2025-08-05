@@ -61,8 +61,11 @@ class SicCode extends Equatable {
     // Check range (0100-9999)
     final codeValue = int.parse(normalized);
     if (codeValue < 100 || codeValue > 9999) {
-      // Pass the original trimmed input for better error messages
-      return Left(SicCodeOutOfRange(trimmed));
+      // Include both original and normalized values when they differ
+      final errorValue = trimmed != normalized
+          ? '$trimmed (normalized: $normalized)'
+          : trimmed;
+      return Left(SicCodeOutOfRange(errorValue));
     }
 
     return Right(SicCode._(normalized));
