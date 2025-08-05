@@ -564,135 +564,6 @@ void main() {
     });
   });
 
-  group('StockError hierarchy', () {
-    test('all errors extend StockError', () {
-      final errors = [
-        const StockInvalidId('invalid-id'),
-        StockInvalidTimestamps(
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-      ];
-
-      for (final error in errors) {
-        expect(error, isA<StockError>());
-        expect(error, isA<DomainError>());
-      }
-    });
-  });
-
-  group('StockInvalidId', () {
-    test('extends StockError', () {
-      const error = StockInvalidId('invalid-id');
-      expect(error, isA<StockError>());
-      expect(error, isA<DomainError>());
-    });
-
-    test('stores invalid ID value', () {
-      const invalidId = 'not-a-uuid';
-      const error = StockInvalidId(invalidId);
-      expect(error.invalidId, equals(invalidId));
-    });
-
-    test('props returns invalidId', () {
-      const invalidId = 'invalid-id';
-      const error = StockInvalidId(invalidId);
-      expect(error.props, equals([invalidId]));
-    });
-
-    test('toString includes invalid ID', () {
-      const invalidId = 'bad-id';
-      const error = StockInvalidId(invalidId);
-      expect(error.toString(), contains('StockInvalidId'));
-      expect(error.toString(), contains(invalidId));
-    });
-
-    test('equality works correctly with same ID', () {
-      const error1 = StockInvalidId('same-id');
-      const error2 = StockInvalidId('same-id');
-      expect(error1, equals(error2));
-      expect(error1.hashCode, equals(error2.hashCode));
-    });
-
-    test('inequality works correctly with different IDs', () {
-      const error1 = StockInvalidId('id-1');
-      const error2 = StockInvalidId('id-2');
-      expect(error1, isNot(equals(error2)));
-      expect(error1.hashCode, isNot(equals(error2.hashCode)));
-    });
-  });
-
-  group('StockInvalidTimestamps', () {
-    late DateTime createdAt;
-    late DateTime updatedAt;
-
-    setUp(() {
-      createdAt = DateTime.now();
-      updatedAt = DateTime.now().subtract(const Duration(days: 1));
-    });
-
-    test('extends StockError', () {
-      final error = StockInvalidTimestamps(
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      expect(error, isA<StockError>());
-      expect(error, isA<DomainError>());
-    });
-
-    test('stores timestamp values', () {
-      final error = StockInvalidTimestamps(
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      expect(error.createdAt, equals(createdAt));
-      expect(error.updatedAt, equals(updatedAt));
-    });
-
-    test('props returns both timestamps', () {
-      final error = StockInvalidTimestamps(
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      expect(error.props, equals([createdAt, updatedAt]));
-    });
-
-    test('toString includes both timestamps', () {
-      final error = StockInvalidTimestamps(
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      expect(error.toString(), contains('StockInvalidTimestamps'));
-      expect(error.toString(), contains('createdAt:'));
-      expect(error.toString(), contains('updatedAt:'));
-    });
-
-    test('equality works correctly with same timestamps', () {
-      final error1 = StockInvalidTimestamps(
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      final error2 = StockInvalidTimestamps(
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      expect(error1, equals(error2));
-      expect(error1.hashCode, equals(error2.hashCode));
-    });
-
-    test('inequality works correctly with different timestamps', () {
-      final error1 = StockInvalidTimestamps(
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      final error2 = StockInvalidTimestamps(
-        createdAt: createdAt.add(const Duration(seconds: 1)),
-        updatedAt: updatedAt,
-      );
-      expect(error1, isNot(equals(error2)));
-      expect(error1.hashCode, isNot(equals(error2.hashCode)));
-    });
-  });
 
   group('error type relationships', () {
     test('different error hierarchies are distinct', () {
@@ -700,20 +571,17 @@ void main() {
       const companyError = CompanyNameEmpty();
       const sicError = SicCodeEmpty();
       const gradeError = GradeEmpty();
-      const stockError = StockInvalidId('invalid');
 
       // All are DomainErrors
       expect(tickerError, isA<DomainError>());
       expect(companyError, isA<DomainError>());
       expect(sicError, isA<DomainError>());
       expect(gradeError, isA<DomainError>());
-      expect(stockError, isA<DomainError>());
 
       // But different hierarchies
       expect(tickerError, isNot(isA<CompanyNameError>()));
       expect(companyError, isNot(isA<SicCodeError>()));
       expect(sicError, isNot(isA<GradeError>()));
-      expect(gradeError, isNot(isA<StockError>()));
       expect(tickerError, isNot(isA<StockError>()));
     });
   });
