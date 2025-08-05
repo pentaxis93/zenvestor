@@ -694,119 +694,6 @@ void main() {
     });
   });
 
-  group('StockRepositoryError hierarchy', () {
-    test('all errors extend StockRepositoryError', () {
-      const errors = [
-        StockAlreadyExistsError('AAPL'),
-        StockStorageError('Database connection failed'),
-      ];
-
-      for (final error in errors) {
-        expect(error, isA<StockRepositoryError>());
-        expect(error, isA<DomainError>());
-      }
-    });
-  });
-
-  group('StockAlreadyExistsError', () {
-    test('extends StockRepositoryError', () {
-      const error = StockAlreadyExistsError('AAPL');
-      expect(error, isA<StockRepositoryError>());
-      expect(error, isA<DomainError>());
-    });
-
-    test('stores ticker value', () {
-      const ticker = 'AAPL';
-      const error = StockAlreadyExistsError(ticker);
-      expect(error.ticker, equals(ticker));
-    });
-
-    test('props returns ticker', () {
-      const ticker = 'AAPL';
-      const error = StockAlreadyExistsError(ticker);
-      expect(error.props, equals([ticker]));
-    });
-
-    test('toString includes ticker', () {
-      const ticker = 'AAPL';
-      const error = StockAlreadyExistsError(ticker);
-      expect(error.toString(), contains('StockAlreadyExistsError'));
-      expect(error.toString(), contains(ticker));
-    });
-
-    test('equality works correctly with same ticker', () {
-      const error1 = StockAlreadyExistsError('AAPL');
-      const error2 = StockAlreadyExistsError('AAPL');
-      expect(error1, equals(error2));
-      expect(error1.hashCode, equals(error2.hashCode));
-    });
-
-    test('inequality works correctly with different tickers', () {
-      const error1 = StockAlreadyExistsError('AAPL');
-      const error2 = StockAlreadyExistsError('GOOGL');
-      expect(error1, isNot(equals(error2)));
-      expect(error1.hashCode, isNot(equals(error2.hashCode)));
-    });
-  });
-
-  group('StockStorageError', () {
-    test('extends StockRepositoryError', () {
-      const error = StockStorageError();
-      expect(error, isA<StockRepositoryError>());
-      expect(error, isA<DomainError>());
-    });
-
-    test('can be created without message', () {
-      const error = StockStorageError();
-      expect(error.message, isNull);
-    });
-
-    test('stores optional message', () {
-      const message = 'Database connection failed';
-      const error = StockStorageError(message);
-      expect(error.message, equals(message));
-    });
-
-    test('props returns message', () {
-      const message = 'Database connection failed';
-      const error = StockStorageError(message);
-      expect(error.props, equals([message]));
-    });
-
-    test('toString includes message when present', () {
-      const message = 'Database connection failed';
-      const error = StockStorageError(message);
-      expect(error.toString(), contains('StockStorageError'));
-      expect(error.toString(), contains(message));
-    });
-
-    test('toString works without message', () {
-      const error = StockStorageError();
-      expect(error.toString(), equals('StockStorageError()'));
-    });
-
-    test('equality works correctly with same message', () {
-      const error1 = StockStorageError('Same message');
-      const error2 = StockStorageError('Same message');
-      expect(error1, equals(error2));
-      expect(error1.hashCode, equals(error2.hashCode));
-    });
-
-    test('inequality works correctly with different messages', () {
-      const error1 = StockStorageError('Message 1');
-      const error2 = StockStorageError('Message 2');
-      expect(error1, isNot(equals(error2)));
-      expect(error1.hashCode, isNot(equals(error2.hashCode)));
-    });
-
-    test('equality works correctly with null messages', () {
-      const error1 = StockStorageError();
-      const error2 = StockStorageError();
-      expect(error1, equals(error2));
-      expect(error1.hashCode, equals(error2.hashCode));
-    });
-  });
-
   group('error type relationships', () {
     test('different error hierarchies are distinct', () {
       const tickerError = TickerSymbolEmpty();
@@ -814,7 +701,6 @@ void main() {
       const sicError = SicCodeEmpty();
       const gradeError = GradeEmpty();
       const stockError = StockInvalidId('invalid');
-      const repoError = StockAlreadyExistsError('AAPL');
 
       // All are DomainErrors
       expect(tickerError, isA<DomainError>());
@@ -822,15 +708,13 @@ void main() {
       expect(sicError, isA<DomainError>());
       expect(gradeError, isA<DomainError>());
       expect(stockError, isA<DomainError>());
-      expect(repoError, isA<DomainError>());
 
       // But different hierarchies
       expect(tickerError, isNot(isA<CompanyNameError>()));
       expect(companyError, isNot(isA<SicCodeError>()));
       expect(sicError, isNot(isA<GradeError>()));
       expect(gradeError, isNot(isA<StockError>()));
-      expect(stockError, isNot(isA<StockRepositoryError>()));
-      expect(repoError, isNot(isA<TickerSymbolError>()));
+      expect(tickerError, isNot(isA<StockError>()));
     });
   });
 }
