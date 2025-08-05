@@ -6,7 +6,6 @@ import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/domain/stock/stock_repository.dart';
 import 'package:zenvestor_server/src/generated/infrastructure/stock/stock_model.dart'
     as serverpod_model;
-import 'package:zenvestor_server/src/infrastructure/persistence/stock/stock_persistence_model.dart';
 import 'package:zenvestor_server/src/infrastructure/stock/mappers/stock_mapper.dart';
 
 /// Serverpod implementation of the stock repository.
@@ -41,32 +40,20 @@ class StockRepositoryServerpod implements IStockRepository {
         return Left(StockAlreadyExistsError(stock.ticker.value));
       }
 
-      // Create persistence model with generated infrastructure data
+      // Create server domain stock with generated infrastructure data
       final now = DateTime.now();
       final stockId = const Uuid().v4();
 
-      final persistenceModelResult = StockPersistenceModel.create(
+      // Create server domain Stock with infrastructure data
+      final serverStock = Stock.fromSharedStock(
         id: stockId,
-        ticker: stock.ticker,
-        name: stock.name,
-        sicCode: stock.sicCode,
-        grade: stock.grade,
         createdAt: now,
         updatedAt: now,
+        sharedStock: stock,
       );
 
-      if (persistenceModelResult.isLeft()) {
-        // Map infrastructure errors to domain repository errors
-        final error = persistenceModelResult.getLeft().toNullable()!;
-        return Left(StockStorageError(
-          'Failed to create persistence model: $error',
-        ));
-      }
-
-      final persistenceModel = persistenceModelResult.toNullable()!;
-
-      // Convert persistence model to Serverpod model
-      final serverpodStock = StockMapper.toServerpod(persistenceModel, null);
+      // Convert domain stock to Serverpod model
+      final serverpodStock = StockMapper.toServerpod(serverStock, null);
 
       // Insert into database
       final insertedStock = await serverpod_model.Stock.db.insertRow(
@@ -74,35 +61,25 @@ class StockRepositoryServerpod implements IStockRepository {
         serverpodStock,
       );
 
-      // Convert back to domain entity via persistence model
-      final persistenceResult = StockMapper.toPersistenceModel(
+      // Convert back to domain entity
+      final domainResult = StockMapper.toDomain(
         insertedStock,
         stockId,
       );
 
-      if (persistenceResult.isLeft()) {
+      if (domainResult.isLeft()) {
         _session.log(
-          'Failed to map inserted stock back to persistence model',
+          'Failed to map inserted stock back to domain',
           level: LogLevel.error,
-          exception: persistenceResult.getLeft().toNullable(),
+          exception: domainResult.getLeft().toNullable(),
         );
-        final leftError = persistenceResult.getLeft().toNullable();
+        final leftError = domainResult.getLeft().toNullable();
         return Left(StockStorageError(
           'Failed to map inserted stock: $leftError',
         ));
       }
 
-      final mappedPersistenceModel = persistenceResult.toNullable()!;
-
-      // Create server domain Stock with infrastructure data
-      final serverStock = Stock.fromSharedStock(
-        id: mappedPersistenceModel.id,
-        createdAt: mappedPersistenceModel.createdAt,
-        updatedAt: mappedPersistenceModel.updatedAt,
-        sharedStock: mappedPersistenceModel.stock,
-      );
-
-      return Right(serverStock);
+      return domainResult;
       // This shouldn't happen as we're mapping back our own data,
       // but handle it gracefully
     } on DatabaseException catch (e) {

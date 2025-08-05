@@ -2,19 +2,19 @@ import 'package:fpdart/fpdart.dart';
 import 'package:test/test.dart';
 import 'package:uuid/uuid.dart';
 import 'package:zenvestor_domain/zenvestor_domain.dart' as shared;
+import 'package:zenvestor_server/src/domain/stock/stock.dart';
+import 'package:zenvestor_server/src/domain/stock/stock_errors.dart';
 import 'package:zenvestor_server/src/generated/infrastructure/stock/stock_model.dart'
     as serverpod_model;
-import 'package:zenvestor_server/src/infrastructure/persistence/stock/persistence_errors.dart';
-import 'package:zenvestor_server/src/infrastructure/persistence/stock/stock_persistence_model.dart';
 import 'package:zenvestor_server/src/infrastructure/stock/mappers/stock_mapper.dart';
 
 void main() {
   group('StockMapper', () {
     const uuid = Uuid();
 
-    group('toPersistenceModel', () {
+    group('toDomain', () {
       test(
-          'should successfully map Serverpod Stock to StockPersistenceModel '
+          'should successfully map Serverpod Stock to domain Stock '
           'with all fields', () {
         // Arrange
         final stockId = uuid.v4();
@@ -29,7 +29,7 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isRight(), isTrue);
@@ -70,7 +70,7 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isRight(), isTrue);
@@ -96,14 +96,14 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isLeft(), isTrue);
         result.fold(
           (error) {
-            expect(error, isA<DatabaseStorageError>());
-            expect((error as DatabaseStorageError).message,
+            expect(error, isA<StockStorageError>());
+            expect((error as StockStorageError).message,
                 equals('Invalid ticker symbol in database'));
           },
           (stock) => fail('Expected error but got success'),
@@ -122,7 +122,7 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isRight(), isTrue);
@@ -146,14 +146,14 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isLeft(), isTrue);
         result.fold(
           (error) {
-            expect(error, isA<DatabaseStorageError>());
-            expect((error as DatabaseStorageError).message,
+            expect(error, isA<StockStorageError>());
+            expect((error as StockStorageError).message,
                 equals('Invalid company name in database'));
           },
           (stock) => fail('Expected error but got success'),
@@ -173,14 +173,14 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isLeft(), isTrue);
         result.fold(
           (error) {
-            expect(error, isA<DatabaseStorageError>());
-            expect((error as DatabaseStorageError).message,
+            expect(error, isA<StockStorageError>());
+            expect((error as StockStorageError).message,
                 equals('Invalid grade in database'));
           },
           (stock) => fail('Expected error but got success'),
@@ -200,14 +200,14 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isLeft(), isTrue);
         result.fold(
           (error) {
-            expect(error, isA<DatabaseStorageError>());
-            expect((error as DatabaseStorageError).message,
+            expect(error, isA<StockStorageError>());
+            expect((error as StockStorageError).message,
                 equals('Invalid SIC code in database'));
           },
           (stock) => fail('Expected error but got success'),
@@ -227,39 +227,15 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isLeft(), isTrue);
         result.fold(
           (error) {
-            expect(error, isA<DatabaseStorageError>());
-            expect((error as DatabaseStorageError).message,
+            expect(error, isA<StockStorageError>());
+            expect((error as StockStorageError).message,
                 equals('Invalid SIC code in database'));
-          },
-          (stock) => fail('Expected error but got success'),
-        );
-      });
-
-      test('should return error when domain id is invalid', () {
-        // Arrange
-        final serverpodStock = serverpod_model.Stock(
-          id: 1,
-          tickerSymbol: 'AAPL',
-          companyName: 'Apple Inc.',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-
-        // Act
-        final result =
-            StockMapper.toPersistenceModel(serverpodStock, 'invalid-uuid');
-
-        // Assert
-        expect(result.isLeft(), isTrue);
-        result.fold(
-          (error) {
-            expect(error, isA<InvalidStockId>());
           },
           (stock) => fail('Expected error but got success'),
         );
@@ -278,7 +254,7 @@ void main() {
         );
 
         // Act
-        final result = StockMapper.toPersistenceModel(serverpodStock, stockId);
+        final result = StockMapper.toDomain(serverpodStock, stockId);
 
         // Assert
         expect(result.isRight(), isTrue);
@@ -305,21 +281,25 @@ void main() {
         final sicCodeEither = shared.SicCode.create('3571');
         final gradeEither = shared.Grade.create('A');
 
-        final persistenceModelEither = StockPersistenceModel.create(
-          id: uuid.v4(),
+        final sharedStockEither = shared.Stock.create(
           ticker: tickerEither.getOrElse((l) => throw Exception()),
           name: Some(companyNameEither.getOrElse((l) => throw Exception())),
           sicCode: Some(sicCodeEither.getOrElse((l) => throw Exception())),
           grade: Some(gradeEither.getOrElse((l) => throw Exception())),
-          createdAt: DateTime(2024, 1, 15),
-          updatedAt: DateTime(2024, 1, 20),
         );
 
-        final persistenceModel =
-            persistenceModelEither.getOrElse((l) => throw Exception());
+        final sharedStock =
+            sharedStockEither.getOrElse((l) => throw Exception());
+
+        final domainStock = Stock.fromSharedStock(
+          id: uuid.v4(),
+          createdAt: DateTime(2024, 1, 15),
+          updatedAt: DateTime(2024, 1, 20),
+          sharedStock: sharedStock,
+        );
 
         // Act
-        final serverpodStock = StockMapper.toServerpod(persistenceModel, 42);
+        final serverpodStock = StockMapper.toServerpod(domainStock, 42);
 
         // Assert
         expect(serverpodStock.id, equals(42));
@@ -327,28 +307,32 @@ void main() {
         expect(serverpodStock.companyName, equals('Apple Inc.'));
         expect(serverpodStock.grade, equals('A'));
         expect(serverpodStock.sicCode, equals('3571'));
-        expect(serverpodStock.createdAt, equals(persistenceModel.createdAt));
-        expect(serverpodStock.updatedAt, equals(persistenceModel.updatedAt));
+        expect(serverpodStock.createdAt, equals(domainStock.createdAt));
+        expect(serverpodStock.updatedAt, equals(domainStock.updatedAt));
       });
 
       test('should successfully map with None optional fields', () {
         // Arrange
         final tickerEither = shared.TickerSymbol.create('TSLA');
-        final persistenceModelEither = StockPersistenceModel.create(
-          id: uuid.v4(),
+        final sharedStockEither = shared.Stock.create(
           ticker: tickerEither.getOrElse((l) => throw Exception()),
           name: const None(),
           sicCode: const None(),
           grade: const None(),
-          createdAt: DateTime(2024),
-          updatedAt: DateTime(2024),
         );
 
-        final persistenceModel =
-            persistenceModelEither.getOrElse((l) => throw Exception());
+        final sharedStock =
+            sharedStockEither.getOrElse((l) => throw Exception());
+
+        final domainStock = Stock.fromSharedStock(
+          id: uuid.v4(),
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+          sharedStock: sharedStock,
+        );
 
         // Act
-        final serverpodStock = StockMapper.toServerpod(persistenceModel, null);
+        final serverpodStock = StockMapper.toServerpod(domainStock, null);
 
         // Assert
         expect(serverpodStock.id, isNull);
@@ -365,19 +349,23 @@ void main() {
           // Arrange
           final tickerEither = shared.TickerSymbol.create('TEST');
           final gradeEither = shared.Grade.create(gradeValue);
-          final persistenceModelEither = StockPersistenceModel.create(
-            id: uuid.v4(),
+          final sharedStockEither = shared.Stock.create(
             ticker: tickerEither.getOrElse((l) => throw Exception()),
             grade: Some(gradeEither.getOrElse((l) => throw Exception())),
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
           );
 
-          final persistenceModel =
-              persistenceModelEither.getOrElse((l) => throw Exception());
+          final sharedStock =
+              sharedStockEither.getOrElse((l) => throw Exception());
+
+          final domainStock = Stock.fromSharedStock(
+            id: uuid.v4(),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            sharedStock: sharedStock,
+          );
 
           // Act
-          final serverpodStock = StockMapper.toServerpod(persistenceModel, 1);
+          final serverpodStock = StockMapper.toServerpod(domainStock, 1);
 
           // Assert
           expect(serverpodStock.grade, equals(gradeValue),
@@ -401,14 +389,12 @@ void main() {
         );
 
         // Act
-        final persistenceResult =
-            StockMapper.toPersistenceModel(serverpodStock, originalId);
-        expect(persistenceResult.isRight(), isTrue);
+        final domainResult = StockMapper.toDomain(serverpodStock, originalId);
+        expect(domainResult.isRight(), isTrue);
 
-        final persistenceModel =
-            persistenceResult.getOrElse((l) => throw Exception());
+        final domainStock = domainResult.getOrElse((l) => throw Exception());
         final resultServerpod =
-            StockMapper.toServerpod(persistenceModel, serverpodStock.id);
+            StockMapper.toServerpod(domainStock, serverpodStock.id);
 
         // Assert
         expect(resultServerpod.id, equals(serverpodStock.id));
