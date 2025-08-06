@@ -15,8 +15,7 @@ import 'package:zenvestor_client/src/protocol/protocols/stock/add_stock_response
     as _i3;
 import 'package:zenvestor_client/src/protocol/protocols/stock/add_stock_request.dart'
     as _i4;
-import 'package:zenvestor_client/src/protocol/greeting.dart' as _i5;
-import 'protocol.dart' as _i6;
+import 'protocol.dart' as _i5;
 
 /// Serverpod endpoint for stock-related operations.
 ///
@@ -33,36 +32,17 @@ class EndpointStock extends _i1.EndpointRef {
   ///
   /// This method accepts a [session] and [request] containing the ticker
   /// symbol, delegates to the use case for business logic, and returns the
-  /// created stock information or throws an appropriate StockException on
-  /// error.
+  /// created stock information or throws an appropriate exception on error.
   ///
   /// Error mapping:
-  /// - StockValidationApplicationError → 400 Bad Request
-  /// - StockAlreadyExistsApplicationError → 409 Conflict
-  /// - StockStorageApplicationError → 503 Service Unavailable
+  /// - StockValidationApplicationError → StockValidationException
+  /// - StockAlreadyExistsApplicationError → StockDuplicateException
+  /// - StockStorageApplicationError → StockServiceException
   _i2.Future<_i3.AddStockResponse> addStock(_i4.AddStockRequest request) =>
       caller.callServerEndpoint<_i3.AddStockResponse>(
         'stock',
         'addStock',
         {'request': request},
-      );
-}
-
-/// This is an example endpoint that returns a greeting message through
-/// its [hello] method.
-/// {@category Endpoint}
-class EndpointGreeting extends _i1.EndpointRef {
-  EndpointGreeting(_i1.EndpointCaller caller) : super(caller);
-
-  @override
-  String get name => 'greeting';
-
-  /// Returns a personalized greeting message: "Hello {name}".
-  _i2.Future<_i5.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_i5.Greeting>(
-        'greeting',
-        'hello',
-        {'name': name},
       );
 }
 
@@ -82,7 +62,7 @@ class Client extends _i1.ServerpodClientShared {
     bool? disconnectStreamsOnLostInternetConnection,
   }) : super(
           host,
-          _i6.Protocol(),
+          _i5.Protocol(),
           securityContext: securityContext,
           authenticationKeyManager: authenticationKeyManager,
           streamingConnectionTimeout: streamingConnectionTimeout,
@@ -93,18 +73,12 @@ class Client extends _i1.ServerpodClientShared {
               disconnectStreamsOnLostInternetConnection,
         ) {
     stock = EndpointStock(this);
-    greeting = EndpointGreeting(this);
   }
 
   late final EndpointStock stock;
 
-  late final EndpointGreeting greeting;
-
   @override
-  Map<String, _i1.EndpointRef> get endpointRefLookup => {
-        'stock': stock,
-        'greeting': greeting,
-      };
+  Map<String, _i1.EndpointRef> get endpointRefLookup => {'stock': stock};
 
   @override
   Map<String, _i1.ModuleEndpointCaller> get moduleLookup => {};

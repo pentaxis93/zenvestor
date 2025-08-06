@@ -21,40 +21,24 @@ void main() {
     });
   });
 
-  group('MyHomePage Widget Tests', () {
+  group('HomePage Widget Tests', () {
     testWidgets('displays initial UI elements', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: MyHomePage(title: 'Test Title'),
+          home: HomePage(),
         ),
       );
 
-      expect(find.text('Test Title'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Send to Server'), findsOneWidget);
-      expect(find.byType(ResultDisplay), findsOneWidget);
-    });
-
-    testWidgets('text field updates when user types',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: MyHomePage(title: 'Test'),
-        ),
-      );
-
-      const testInput = 'Test Input';
-      await tester.enterText(find.byType(TextField), testInput);
-
-      // Verify the TextField contains the entered text
-      final textField = tester.widget<TextField>(find.byType(TextField));
-      expect(textField.controller?.text, testInput);
+      expect(find.text('Zenvestor'), findsOneWidget);
+      expect(find.text('Welcome to Zenvestor'), findsOneWidget);
+      expect(find.text('Your AI-powered investment assistant'), findsOneWidget);
+      expect(find.byIcon(Icons.trending_up), findsOneWidget);
     });
 
     testWidgets('has proper widget structure', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: MyHomePage(title: 'Test'),
+          home: HomePage(),
         ),
       );
 
@@ -62,7 +46,21 @@ void main() {
       expect(find.byType(Scaffold), findsOneWidget);
       expect(find.byType(AppBar), findsOneWidget);
       expect(find.byType(Column), findsOneWidget);
-      expect(find.byType(Padding), findsNWidgets(5));
+      expect(find.byType(Icon), findsOneWidget);
+      expect(find.byType(Text), findsNWidgets(3)); // Title + 2 text widgets
+    });
+
+    testWidgets('app bar displays correct title', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: HomePage(),
+        ),
+      );
+
+      // Verify app bar title
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      final titleWidget = appBar.title! as Text;
+      expect(titleWidget.data, 'Zenvestor');
     });
   });
 }

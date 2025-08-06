@@ -24,11 +24,11 @@ void main() {
       expect(serverUrl, customUrl);
     });
 
-    test('greeting message formatting', () {
-      // Test the message formatting logic used in the endpoint
-      const message = 'Hello Alice';
+    test('app title', () {
+      // Test the app title constant
+      const appTitle = 'Zenvestor';
 
-      expect(message, 'Hello Alice');
+      expect(appTitle, 'Zenvestor');
     });
 
     test('error message formatting', () {
