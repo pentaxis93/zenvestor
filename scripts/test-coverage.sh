@@ -36,7 +36,7 @@ echo "Running tests in parallel..."
     # Generate references for all source files to ensure accurate coverage
     dlcov gen-refs >/dev/null 2>&1 && \
     # Run tests with coverage (use dart test for pure Dart projects)
-    if dart test --coverage=coverage --concurrency=$CORES >/dev/null 2>&1; then
+    if SERVERPOD_RUN_MODE=test dart test --coverage=coverage --concurrency=$CORES >/dev/null 2>&1; then
         # Use dlcov to check coverage, including untested files
         # Exclude demo files that will be removed
         # Capture the output to extract the percentage
