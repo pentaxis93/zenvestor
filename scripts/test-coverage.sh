@@ -35,8 +35,8 @@ echo "Running tests in parallel..."
     cd "$PROJECT_ROOT/zenvestor_server" && \
     # Generate references for all source files to ensure accurate coverage
     dlcov gen-refs >/dev/null 2>&1 && \
-    # Run tests with coverage (use flutter test for proper coverage collection)
-    if flutter test --coverage --concurrency=$CORES >/dev/null 2>&1; then
+    # Run tests with coverage (use dart test for pure Dart projects)
+    if dart test --coverage=coverage --concurrency=$CORES >/dev/null 2>&1; then
         # Use dlcov to check coverage, including untested files
         # Exclude demo files that will be removed
         # Capture the output to extract the percentage
