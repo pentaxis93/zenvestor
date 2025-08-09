@@ -30,39 +30,19 @@ void main() {
       );
 
       expect(find.text('Test Title'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Send to Server'), findsOneWidget);
-      expect(find.byType(ResultDisplay), findsOneWidget);
+      expect(find.text('Welcome to Zenvestor'), findsOneWidget);
+      expect(find.byType(Center), findsOneWidget);
     });
 
-    testWidgets('text field updates when user types',
-        (WidgetTester tester) async {
+    testWidgets('has correct scaffold structure', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: MyHomePage(title: 'Test'),
         ),
       );
 
-      const testInput = 'Test Input';
-      await tester.enterText(find.byType(TextField), testInput);
-
-      // Verify the TextField contains the entered text
-      final textField = tester.widget<TextField>(find.byType(TextField));
-      expect(textField.controller?.text, testInput);
-    });
-
-    testWidgets('has proper widget structure', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: MyHomePage(title: 'Test'),
-        ),
-      );
-
-      // Verify the structure is correct
       expect(find.byType(Scaffold), findsOneWidget);
       expect(find.byType(AppBar), findsOneWidget);
-      expect(find.byType(Column), findsOneWidget);
-      expect(find.byType(Padding), findsNWidgets(5));
     });
   });
 }

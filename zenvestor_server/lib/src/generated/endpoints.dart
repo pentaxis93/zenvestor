@@ -11,9 +11,8 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _i1;
 import '../endpoints/stock_endpoint.dart' as _i2;
-import '../greeting_endpoint.dart' as _i3;
 import 'package:zenvestor_server/src/generated/protocols/stock/add_stock_request.dart'
-    as _i4;
+    as _i3;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -24,13 +23,7 @@ class Endpoints extends _i1.EndpointDispatch {
           server,
           'stock',
           null,
-        ),
-      'greeting': _i3.GreetingEndpoint()
-        ..initialize(
-          server,
-          'greeting',
-          null,
-        ),
+        )
     };
     connectors['stock'] = _i1.EndpointConnector(
       name: 'stock',
@@ -41,7 +34,7 @@ class Endpoints extends _i1.EndpointDispatch {
           params: {
             'request': _i1.ParameterDescription(
               name: 'request',
-              type: _i1.getType<_i4.AddStockRequest>(),
+              type: _i1.getType<_i3.AddStockRequest>(),
               nullable: false,
             )
           },
@@ -52,30 +45,6 @@ class Endpoints extends _i1.EndpointDispatch {
               (endpoints['stock'] as _i2.StockEndpoint).addStock(
             session,
             params['request'],
-          ),
-        )
-      },
-    );
-    connectors['greeting'] = _i1.EndpointConnector(
-      name: 'greeting',
-      endpoint: endpoints['greeting']!,
-      methodConnectors: {
-        'hello': _i1.MethodConnector(
-          name: 'hello',
-          params: {
-            'name': _i1.ParameterDescription(
-              name: 'name',
-              type: _i1.getType<String>(),
-              nullable: false,
-            )
-          },
-          call: (
-            _i1.Session session,
-            Map<String, dynamic> params,
-          ) async =>
-              (endpoints['greeting'] as _i3.GreetingEndpoint).hello(
-            session,
-            params['name'],
           ),
         )
       },

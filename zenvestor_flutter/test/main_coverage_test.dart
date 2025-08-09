@@ -23,19 +23,5 @@ void main() {
 
       expect(serverUrl, customUrl);
     });
-
-    test('greeting message formatting', () {
-      // Test the message formatting logic used in the endpoint
-      const message = 'Hello Alice';
-
-      expect(message, 'Hello Alice');
-    });
-
-    test('error message formatting', () {
-      // Test error message formatting
-      const formattedError = 'Exception: Connection failed';
-
-      expect(formattedError, 'Exception: Connection failed');
-    });
   });
 }

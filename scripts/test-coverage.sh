@@ -45,7 +45,7 @@ echo "Running tests in parallel..."
         # Capture the output to extract the percentage
         dlcov_output=$(dlcov -c 0 --include-untested-files=true \
             --exclude-suffix=".g.dart,.freezed.dart" \
-            --exclude-files="*/lib/server.dart,*/lib/src/generated/*,*/lib/src/birthday_reminder.dart,*/lib/src/web/routes/root.dart,*/lib/src/web/widgets/built_with_serverpod_page.dart,*/lib/src/greeting_endpoint.dart" 2>&1)
+            --exclude-files="*/lib/server.dart,*/lib/src/generated/*" 2>&1)
         # Extract coverage percentage from dlcov output
         # dlcov outputs: "[SUCCESS]: The total code coverage X%"
         server_coverage=$(echo "$dlcov_output" | grep -oE "code coverage [0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1)
