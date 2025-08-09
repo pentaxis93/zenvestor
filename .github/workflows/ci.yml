@@ -103,10 +103,10 @@ jobs:
         with:
           install-coverage-tools: 'true'
 
-      - name: Run tests with coverage
+      - name: Run tests with coverage (DEBUG MODE)
         run: |
-          # Run the coverage script
-          output=$(./scripts/test-coverage.sh)
+          # Run the DEBUG coverage script to diagnose CI issues
+          output=$(./scripts/test-coverage-debug.sh)
           echo "$output"
           
           # Extract coverage percentages
@@ -136,6 +136,13 @@ jobs:
           SERVERPOD_RUN_MODE: test
           SERVERPOD_PASSWORD_database: ${{ secrets.POSTGRES_TEST_PASSWORD }}
           SERVERPOD_PASSWORD_redis: ${{ secrets.REDIS_TEST_PASSWORD }}
+
+      - name: Upload debug logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-debug-logs
+          path: coverage-debug-logs/
 
       - name: Upload server coverage
         uses: actions/upload-artifact@v4
