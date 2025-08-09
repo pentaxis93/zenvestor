@@ -35,14 +35,17 @@ echo "Running tests in parallel..."
     cd "$PROJECT_ROOT/zenvestor_server" && \
     # Generate references for all source files to ensure accurate coverage
     dlcov gen-refs >/dev/null 2>&1 && \
-    # Run tests with coverage (use dart test for pure Dart projects)
-    if SERVERPOD_RUN_MODE=test dart test --coverage=coverage --concurrency=$CORES >/dev/null 2>&1; then
+    # Run tests with coverage using the coverage package for pure Dart projects
+    if SERVERPOD_RUN_MODE=test dart pub global run coverage:test_with_coverage \
+        --package . \
+        --out coverage \
+        -- --concurrency=$CORES >/dev/null 2>&1; then
         # Use dlcov to check coverage, including untested files
         # Exclude demo files that will be removed
         # Capture the output to extract the percentage
         dlcov_output=$(dlcov -c 0 --include-untested-files=true \
             --exclude-suffix=".g.dart,.freezed.dart" \
-            --exclude-files="lib/src/generated/*,lib/src/birthday_reminder.dart,lib/src/web/routes/root.dart,lib/src/web/widgets/built_with_serverpod_page.dart,lib/server.dart,lib/src/greeting_endpoint.dart" 2>&1)
+            --exclude-files="*/lib/server.dart,*/lib/src/generated/*,*/lib/src/birthday_reminder.dart,*/lib/src/web/routes/root.dart,*/lib/src/web/widgets/built_with_serverpod_page.dart,*/lib/src/greeting_endpoint.dart" 2>&1)
         # Extract coverage percentage from dlcov output
         # dlcov outputs: "[SUCCESS]: The total code coverage X%"
         server_coverage=$(echo "$dlcov_output" | grep -oE "code coverage [0-9]+\.[0-9]+%" | grep -oE "[0-9]+\.[0-9]+" | head -1)
